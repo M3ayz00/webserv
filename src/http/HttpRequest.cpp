@@ -114,6 +114,7 @@ size_t    HttpRequest::parseRequestLine()
     validateMethod();
     validateURI();
     validateVersion();
+    std::cout << method << " " << uri << " " << version << "\n"; 
     state = HEADERS;
     return (line.size() + 2);
 }
@@ -340,4 +341,19 @@ std::pair<std::string, std::string> HttpRequest::splitKeyValue(const std::string
 bool    HttpRequest::isRequestComplete()
 {
     return (state == COMPLETE);
+}
+
+void    HttpRequest::clear()
+{
+    this->body.clear();
+    this->bodyStart = 0;
+    this->state = REQUESTLINE;
+    this->method.clear();
+    this->uri.clear();
+    this->uriPath.clear();
+    this->request.clear();
+    this->version.clear();
+    this->_pos = 0;
+    this->_bufferLen = 0;
+    this->_buffer = NULL;
 }

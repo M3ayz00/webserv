@@ -91,7 +91,7 @@ void    ServerManager::addToEpoll(int clientSocket)
     setNonBlocking(clientSocket);
     struct epoll_event event;
     memset(&event, 0, sizeof(event));
-    event.events = EPOLLIN | EPOLLOUT;
+    event.events = EPOLLIN | EPOLLOUT | EPOLLET;
     event.data.fd = clientSocket;
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, clientSocket, &event) == -1)
         throw std::runtime_error(ERROR + timeStamp() + "ERROR: Adding socket to epoll: " + std::string(strerror(errno)) + std::string(RESET));
@@ -128,6 +128,7 @@ void ServerManager::sendResponse(int clientSocket) {
         closeConnection(clientSocket);
     } else {
         modifyEpollEvent(clientSocket, EPOLLIN);
+        Clients.at(clientSocket).getRequest().clear();     
     }
 }
 

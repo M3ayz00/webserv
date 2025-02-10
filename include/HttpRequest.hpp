@@ -81,5 +81,6 @@ class HttpRequest
         std::string& getRequestBuffer() { return request; }
         //main parsing
         size_t    parse(const char* buffer, size_t bufferLen);
+        void    clear();
 
 };
