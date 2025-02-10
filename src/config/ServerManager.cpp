@@ -47,12 +47,12 @@ Server* ServerManager::findServerBySocket(int fd)
 void  ServerManager::setNonBlocking(int fd)
 {
     if (fd < 0)
-        throw std::runtime_error("ERROR: Invalid file descriptor: " + std::to_string(fd));
+        throw std::runtime_error(ERROR + timeStamp() + "ERROR: Invalid file descriptor: " + std::to_string(fd) + std::string(RESET));
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1)
-        throw std::runtime_error("ERROR: Getting flags for client socket: " + std::string(strerror(errno)));
-    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK))
-        throw std::runtime_error("ERROR: Setting socket to non-blocking: " + std::string(strerror(errno)));
+        throw std::runtime_error(ERROR + timeStamp() + "ERROR: Getting flags for client socket: " + std::string(strerror(errno)) + std::string(RESET));
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK)) 
+        throw std::runtime_error(ERROR + timeStamp() + "ERROR: Setting socket to non-blocking: " + std::string(strerror(errno)) + std::string(RESET));
 }
 
 
@@ -62,32 +62,21 @@ void    ServerManager::addListeningSockets(std::vector<Server*>& servers)
     int i = 0;
     while (server != servers.end())
     {
-        std::clog << "INFO: Server number " << i + 1 << '\n';
+        std::clog << DEBUG << timeStamp() << "DEBUG: Server number " << i + 1 << '\n' << RESET;
         int j = 0;
         std::vector<Socket*>::const_iterator socket = (*server)->getListeningSockets().begin();
         while (socket != (*server)->getListeningSockets().end())
         {
-            std::clog << "INFO: Socket number " << j + 1 << " for Server number " << i + 1 << ":\n";
+            std::clog << DEBUG << timeStamp() << "DEBUG: Socket number " << j + 1 << " for Server number " << i + 1 << ":\n" << RESET;
             int listeningSocket = (*socket)->getFd();
-            socklen_t optval;
-            socklen_t optlen = sizeof(optval);
-            if (getsockopt(listeningSocket, SOL_SOCKET, SO_ACCEPTCONN, &optval, &optlen) == -1) //remove before push
-                throw std::runtime_error("getsockopt failed: " + std::string(strerror(errno)));
-            else 
-            {
-                if (optval)
-                    std::cout << "   -Socket is in listening state.\n";
-                else
-                    std::cerr << "   -Socket is NOT in listening state.\n";
-            }
             setNonBlocking(listeningSocket);
             struct epoll_event event;
             memset(&event, 0, sizeof(event));
             event.events = EPOLLIN;
             event.data.fd = listeningSocket;
-            std::cout << "   -Socket's fd : " << listeningSocket << '\n';
+            std::cout << DEBUG << "   -Socket's fd : " << listeningSocket << '\n' << RESET;
             if (epoll_ctl(epollFd, EPOLL_CTL_ADD, listeningSocket, &event) == -1)
-                throw std::runtime_error("ERROR:  adding socket to epoll: " + std::string(strerror(errno)));
+                throw std::runtime_error(ERROR + timeStamp() + "ERROR:  adding socket to epoll: " + std::string(strerror(errno)) + std::string(RESET));
             events.push_back(event);
             ++socket;
             j++;
@@ -102,10 +91,10 @@ void    ServerManager::addToEpoll(int clientSocket)
     setNonBlocking(clientSocket);
     struct epoll_event event;
     memset(&event, 0, sizeof(event));
-    event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+    event.events = EPOLLIN | EPOLLOUT;
     event.data.fd = clientSocket;
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, clientSocket, &event) == -1)
-        throw std::runtime_error("ERROR: Adding socket to epoll: " + std::string(strerror(errno)));
+        throw std::runtime_error(ERROR + timeStamp() + "ERROR: Adding socket to epoll: " + std::string(strerror(errno)) + std::string(RESET));
 }
 
 void ServerManager::closeConnection(int fd) {
@@ -127,7 +116,7 @@ void ServerManager::modifyEpollEvent(int fd, uint32_t events) {
 
 void ServerManager::sendErrorResponse(int clientSocket, const std::string& error) {
     if (send(clientSocket, error.c_str(), error.size(), 0) == -1) {
-        std::cerr << "ERROR: sending error response to client socket N" << clientSocket << "\n";
+        std::cerr << ERROR << timeStamp() << "ERROR: sending error response to client socket N" << clientSocket << "\n" << RESET;
         closeConnection(clientSocket);
     }
 }
@@ -135,7 +124,7 @@ void ServerManager::sendErrorResponse(int clientSocket, const std::string& error
 void ServerManager::sendResponse(int clientSocket) {
     std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\npain!";
     if (send(clientSocket, response.c_str(), response.size(), 0) == -1) {
-        std::cerr << "ERROR: Sending data\n";
+        std::cerr << ERROR << timeStamp() << "ERROR: Sending data\n" << RESET;
         closeConnection(clientSocket);
     } else {
         modifyEpollEvent(clientSocket, EPOLLIN);
@@ -167,7 +156,7 @@ void ServerManager::readRequest(Client& Client) {
 
     bytesReceived = recv(Client.getFd(), buffer, bufferSize, 0);
     if (bytesReceived == -1) {
-        std::cerr << "ERROR: receiving data in client socket N" << Client.getFd() << "\n";
+        std::cerr << ERROR << timeStamp() << "ERROR: receiving data in client socket N" << Client.getFd() << "\n" << RESET;
         closeConnection(Client.getFd());
         return ;
     }
@@ -217,7 +206,7 @@ void ServerManager::handleEvent(const epoll_event& event) {
         sendResponse(fd); 
     }
     else if (event.events & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) {
-        std::cerr << "ERROR: " << strerror(errno) << "\n";
+        std::cerr << ERROR << timeStamp() << "ERROR: " << strerror(errno) << "\n" << RESET;
         closeConnection(fd);
     }
 }
@@ -227,7 +216,7 @@ void    ServerManager::eventsLoop() // events Loop (main loop)
     while (1) {
         int eventsNum = epoll_wait(epollFd, events.data(), events.size(), -1);
         if (eventsNum == -1){
-            std::cerr << "ERROR: in epoll_wait: " << strerror(errno) << std::endl;
+            std::cerr << ERROR << timeStamp() << "ERROR: in epoll_wait: " << strerror(errno) << std::endl << RESET;
             continue ;
         }
         if (eventsNum == events.size())
@@ -246,7 +235,7 @@ void  ServerManager::initServers()
     {
         try {    
             Server* server = new Server(*it);
-            std::clog << "Setting & starting up server :\n   -host: " << it->getHost() << "\n";
+            std::clog << INFO << timeStamp() << "INFO: Setting & starting up server :\n" << RESET << "   -host: " << it->getHost() << "\n";
             std::set<int>::const_iterator port =  it->getPorts().begin();
             while (port != it->getPorts().end()) {
                 std::clog << "   -port: " << *port;
@@ -269,7 +258,7 @@ void  ServerManager::initServers()
 void ServerManager::initEpoll() {
     epollFd = epoll_create1(O_CLOEXEC);
     if (epollFd == -1) {
-        throw std::runtime_error("ERROR: creating epoll instance: " + std::string(strerror(errno)));
+        throw std::runtime_error(ERROR + timeStamp() + "ERROR: creating epoll instance: " + std::string(strerror(errno) + std::string(RESET)));
     }
     addListeningSockets(servers);
 }

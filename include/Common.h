@@ -29,9 +29,16 @@
 
 #include <cstdlib>
 
+#define RESET "\033[0m"
+#define ERROR "\033[31m"
+#define INFO "\033[36m" 
+#define LOG "\033[34m" 
+#define DEBUG "\033[32m"  
+
 std::string& strTrim(std::string& str);
 std::string&  toLowerCase(std::string& str);
 uint32_t stringToIpBinary(std::string addressIp);
 int hexToValue(char c);
 bool isHexDigit(char c);
 int _16_to_10(std::string str);
+std::string    timeStamp();

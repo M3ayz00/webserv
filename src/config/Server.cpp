@@ -21,7 +21,7 @@ Server::Server(const Config& serverConfig)
         }
         catch(const std::exception& e)
         {
-            std::cerr << "ERROR:  setting up server on port " << *it << ": " << e.what() << std::endl;
+            std::cerr << ERROR << timeStamp() << "ERROR:  setting up server on port " << *it << ": " << e.what()  << RESET << std::endl;
         }
         ++it;
     }
@@ -33,9 +33,9 @@ int Server::acceptConnection(int listeningSocket)
     socklen_t client_len = sizeof(client_addr);
     int clientSocket = accept(listeningSocket, (struct sockaddr*)&client_addr, &client_len);
     if (clientSocket == -1)
-        throw std::runtime_error("ERROR:  accepting connection: " + std::string(strerror(errno)));
+        throw std::runtime_error(timeStamp() + "ERROR:  accepting connection: " + std::string(strerror(errno)) + std::string(RESET));
     clientSockets.push_back(clientSocket); // idk if we still need this
-    std::clog << "LOG: New client connected, client socket N" << clientSocket << "\n";
+    std::clog << LOG << timeStamp() << "LOG: New client connected, client socket N" << clientSocket << ".\n" << RESET;
     return (clientSocket);
 }
 
@@ -44,9 +44,9 @@ void Server::closeConnection(int client_fd)
     std::vector<int>::iterator it = std::find(clientSockets.begin(), clientSockets.end(), client_fd);
     if (it != clientSockets.end())
     {
+        std::clog << LOG << timeStamp() << "LOG: Client disconnected, client socket N" << client_fd <<".\n" << RESET;
         close(client_fd);
         clientSockets.erase(it);
-        std::clog << "LOG: Connection closed.\n";
     }
 }
 
@@ -58,13 +58,13 @@ void Server::shutdownServer()
         delete *socket;
     for (size_t i = 0; i < clientSockets.size(); ++i)
         close(clientSockets[i]);
-    std::clog << "LOG: Server shut down.\n";
+    std::clog << LOG << timeStamp() << "LOG: Server shut down.\n" << RESET ;
 }
 
 
 Server::~Server()
 {
-    std::cerr << "LOG: Server shutting down...\n";
+    std::cerr << LOG << timeStamp() << "LOG: Server shutting down...\n" << RESET ;
     shutdownServer();
 }
 

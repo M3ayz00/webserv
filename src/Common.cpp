@@ -58,3 +58,12 @@ bool isHexDigit(char c)
 {
   return (std::isdigit(c) || (std::tolower(c) >= 'a' && std::tolower(c) <= 'f'));
 }
+
+std::string timeStamp()
+{
+    time_t timestamp = time(NULL);
+    struct tm datetime = *localtime(&timestamp);
+    char output[50];
+    strftime(output, 50, "%D %r", &datetime);
+    return ("[" + std::string(output) + "] ");
+}

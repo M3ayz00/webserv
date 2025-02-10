@@ -246,7 +246,6 @@ void    HttpRequest::validateVersion()
 size_t    HttpRequest::parseHeaders()
 {
     size_t startPos = _pos;
-    std::clog << "DEBUG: Parsing Headers...\n";
     std::string line = readLine();
     while (!line.empty())
     {
@@ -259,7 +258,6 @@ size_t    HttpRequest::parseHeaders()
             headers[key] += "," + value;
         else
             headers[key] = value;
-        std::clog << "DEBUG: " << key << ": " << value << "\n";
         line = readLine();
     }
     state = BODY;
