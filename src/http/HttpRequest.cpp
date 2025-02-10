@@ -87,7 +87,17 @@ size_t    HttpRequest::parse(const char* buffer, size_t bufferLen)
         if (state == BODY) 
             bytesReceived += parseBody(); 
         if (state == COMPLETE) 
+        {
+            std::cout << DEBUG << "FULL PARSED REQUEST : \n"
+                << "          -method: " << method 
+                <<"\n          -uri: " << uri
+                <<"\n          -version: " << version
+                <<"\n          -headers:\n";
+            for (auto header : headers)
+                std::cout << "              -" << header.first << ": " << header.second << "\n";
+            std::cout << "          -body: \n{" << body << "\n}\n" << RESET;  
             return 0;
+        }
     }
     catch(const HttpIncompleteRequest& e)
     {
@@ -114,7 +124,7 @@ size_t    HttpRequest::parseRequestLine()
     validateMethod();
     validateURI();
     validateVersion();
-    std::cout << method << " " << uri << " " << version << "\n"; 
+    // std::cout << DEBUG << "DEBUG: " << method << " " << uri << " " << version << "\n"; 
     state = HEADERS;
     return (line.size() + 2);
 }
@@ -356,4 +366,5 @@ void    HttpRequest::clear()
     this->_pos = 0;
     this->_bufferLen = 0;
     this->_buffer = NULL;
+    this->headers.clear();
 }
