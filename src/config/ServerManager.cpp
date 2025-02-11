@@ -91,7 +91,7 @@ void    ServerManager::addToEpoll(int clientSocket)
     setNonBlocking(clientSocket);
     struct epoll_event event;
     memset(&event, 0, sizeof(event));
-    event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+    event.events = EPOLLIN;
     event.data.fd = clientSocket;
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, clientSocket, &event) == -1)
         throw std::runtime_error(ERROR + timeStamp() + "ERROR: Adding socket to epoll: " + std::string(strerror(errno)) + std::string(RESET));
@@ -100,8 +100,8 @@ void    ServerManager::addToEpoll(int clientSocket)
 void ServerManager::closeConnection(int fd) {
     Server* server = findServerBySocket(fd);
     if (server) {
-        server->closeConnection(fd);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+        server->closeConnection(fd);
     }
 }
 
@@ -129,6 +129,7 @@ void ServerManager::sendResponse(int clientSocket) {
     } else {
         modifyEpollEvent(clientSocket, EPOLLIN);
         Clients.at(clientSocket).getRequest().clear();     
+        std::clog << LOG << timeStamp() << "LOG: Sent a response succesfully to client socket N" << clientSocket << "\n" << RESET;
     }
 }
 
@@ -173,7 +174,10 @@ void ServerManager::readRequest(Client& Client) {
     if (bytesReceived > 0)
         request.erase(0, bytesReceived);
     if (Client.getRequest().isRequestComplete())
+    {
+        modifyEpollEvent(Client.getFd(), EPOLLOUT);
         return ;
+    }
 }
 
 // here where u should parse the request
@@ -185,7 +189,6 @@ void ServerManager::handleRequest(int clientSocket) {
         // hna l3b kima bghiti
         try {
             readRequest(Client->second);
-            modifyEpollEvent(clientSocket, EPOLLOUT);
         } catch (const std::exception& e) {
             sendErrorResponse(clientSocket, e.what());
         }

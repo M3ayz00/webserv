@@ -8,11 +8,11 @@ HttpRequest::HttpRequest(const std::string &request)
     std::string requestLine;
     std::getline(iss, requestLine);
     if (requestLine.empty() || requestLine[requestLine.size() - 1] != '\r')
-        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\nMalformed request line");
+        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line4");
     std::istringstream oss(requestLine);
     oss >> method >> uri >> version;
     if ((method.empty() || uri.empty() || version.empty()))
-        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\nMalformed request line");
+        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line5");
     std::cout << "LOG: received request:\n      \"" << method << "\" " <<  "\"" << uri << "\" " <<  "\"" << version << "\" " << std::endl; 
     if ((method == "GET" || method == "POST" || method == "DELETE")
         && (version == "HTTP/1.0" || version == "HTTP/1.1"))
@@ -40,11 +40,11 @@ HttpRequest::HttpRequest(const std::string &request)
             std::cout << "==>BODY : \n" << body << "\n_________________\n" << std::endl;
             // if (body.size() == contentLen)
             this->body = body;
-            // throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\nMalformed request line");
+            // throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line");
         }
     }
     else
-        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\nMalformed request line");
+        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line6");
 }
 
 
@@ -115,9 +115,9 @@ size_t    HttpRequest::parseRequestLine()
     size_t firstSpace = line.find(' ');
     size_t secondSpace = line.find(' ', firstSpace + 1);
     if (firstSpace == std::string::npos || secondSpace == std::string::npos)
-        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line")); 
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line1")); 
     if (line.find(' ', secondSpace + 1) != std::string::npos)
-        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line")); 
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line2")); 
     method = line.substr(0, firstSpace);
     uri = line.substr(firstSpace + 1, secondSpace - firstSpace - 1);
     version = line.substr(secondSpace + 1);
@@ -132,7 +132,7 @@ size_t    HttpRequest::parseRequestLine()
 void    HttpRequest::validateMethod()
 {
     if (method != "GET" && method != "DELETE" && method != "POST")
-        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nMalformed request line"));
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nMalformed request line3"));
 }
 
 void    HttpRequest::validateURI()
