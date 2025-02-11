@@ -58,17 +58,14 @@ void  ServerManager::setNonBlocking(int fd)
 
 void    ServerManager::addListeningSockets(std::vector<Server*>& servers)
 {
-    std::vector<Server*>::iterator server = servers.begin();
-    int i = 0;
-    while (server != servers.end())
+    for (size_t i = 0; i < servers.size(); i++)
     {
         std::clog << DEBUG << timeStamp() << "DEBUG: Server number " << i + 1 << '\n' << RESET;
-        int j = 0;
-        std::vector<Socket*>::const_iterator socket = (*server)->getListeningSockets().begin();
-        while (socket != (*server)->getListeningSockets().end())
+        std::vector<Socket*> sockets = servers[i]->getListeningSockets();
+        for (size_t j = 0; j < sockets.size(); j++)
         {
             std::clog << DEBUG << timeStamp() << "DEBUG: Socket number " << j + 1 << " for Server number " << i + 1 << ":\n" << RESET;
-            int listeningSocket = (*socket)->getFd();
+            int listeningSocket = sockets[j]->getFd();
             setNonBlocking(listeningSocket);
             struct epoll_event event;
             memset(&event, 0, sizeof(event));
@@ -78,11 +75,7 @@ void    ServerManager::addListeningSockets(std::vector<Server*>& servers)
             if (epoll_ctl(epollFd, EPOLL_CTL_ADD, listeningSocket, &event) == -1)
                 throw std::runtime_error(ERROR + timeStamp() + "ERROR:  adding socket to epoll: " + std::string(strerror(errno)) + std::string(RESET));
             events.push_back(event);
-            ++socket;
-            j++;
         }
-        ++server;
-        i++;
     }
 }
 
@@ -234,29 +227,25 @@ void    ServerManager::eventsLoop() // events Loop (main loop)
 
 void  ServerManager::initServers()
 {
-    std::vector<Config>::const_iterator it = serverPool.begin();
-    while (it != serverPool.end())
+    for (size_t i = 0; i < serverPool.size(); i++)
     {
         try {    
-            Server* server = new Server(*it);
-            std::clog << INFO << timeStamp() << "INFO: Setting & starting up server :\n" << RESET << "   -host: " << it->getHost() << "\n";
-            std::set<int>::const_iterator port =  it->getPorts().begin();
-            while (port != it->getPorts().end()) {
+            Server* server = new Server(serverPool[i]);
+            std::clog << INFO << timeStamp() << "INFO: Setting & starting up server :\n" << RESET << "   -host: " << serverPool[i].getHost() << "\n";
+            std::set<int>::const_iterator port =  serverPool[i].getPorts().begin();
+            while (port != serverPool[i].getPorts().end()) {
                 std::clog << "   -port: " << *port;
                 ++port;
             }
             std::clog << std::endl;
             servers.push_back(server);
-            std::vector<Socket*>::const_iterator socket = server->getListeningSockets().begin();
-            while (socket != server->getListeningSockets().end()) {
-                listeningSockets[(*socket)->getFd()] = (*socket);
-                ++socket;
-            }
+            std::vector<Socket*> sockets = server->getListeningSockets();
+            for (size_t j = 0; j < sockets.size(); j++)
+                listeningSockets[sockets[j]->getFd()] = sockets[j];
         }
         catch(const std::exception& e) {
             std::cerr << e.what() << '\n';
         }
-        ++it;
     }
 }
 void ServerManager::initEpoll() {

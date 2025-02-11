@@ -11,7 +11,6 @@
             std::vector<Server*> servers;
             std::map<int, Socket*> listeningSockets;
             std::vector<struct epoll_event> events;
-            std::queue<HttpRequest> requests;
             std::map<int, Client> Clients;
             int epollFd;
 

@@ -38,6 +38,7 @@
 std::string& strTrim(std::string& str);
 std::string&  toLowerCase(std::string& str);
 uint32_t stringToIpBinary(std::string addressIp);
+std::string ipBinaryToString(uint32_t ipAddress);
 int hexToValue(char c);
 bool isHexDigit(char c);
 int _16_to_10(std::string str);

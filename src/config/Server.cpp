@@ -35,7 +35,7 @@ int Server::acceptConnection(int listeningSocket)
     if (clientSocket == -1)
         throw std::runtime_error(timeStamp() + "ERROR:  accepting connection: " + std::string(strerror(errno)) + std::string(RESET));
     clientSockets.push_back(clientSocket); // idk if we still need this
-    std::clog << LOG << timeStamp() << "LOG: New client connected, client socket N" << clientSocket << ".\n" << RESET;
+    std::clog << LOG << timeStamp() << "LOG: New client connected: [" << ipBinaryToString(client_addr.sin_addr.s_addr) << "].\n" << RESET;
     return (clientSocket);
 }
 

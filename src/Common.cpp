@@ -31,6 +31,19 @@ uint32_t stringToIpBinary(std::string addressIp)
   return (actualIpAddress);
 }
 
+std::string ipBinaryToString(uint32_t ipAddress)
+{
+  std::ostringstream oss;
+  for (int i = 0; i < 4; i++)
+  {
+    uint32_t octet = ipAddress >> (i * 8) & 0xFF;
+    oss << octet;
+    if (i < 3)
+      oss << ".";
+  }
+  return (oss.str());
+}
+
 int hexToValue(char c)
 {
   if (c >= 'a' && c <= 'z') return c - 'a' + 10;
