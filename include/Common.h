@@ -28,6 +28,7 @@
 #include <unordered_map>
 
 #include <cstdlib>
+#include <csignal>
 
 #define RESET "\033[0m"
 #define ERROR "\033[31m"

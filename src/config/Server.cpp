@@ -33,7 +33,7 @@ int Server::acceptConnection(int listeningSocket)
     socklen_t client_len = sizeof(client_addr);
     int clientSocket = accept(listeningSocket, (struct sockaddr*)&client_addr, &client_len);
     if (clientSocket == -1)
-        throw std::runtime_error(timeStamp() + "ERROR:  accepting connection: " + std::string(strerror(errno)) + std::string(RESET));
+        throw std::runtime_error(ERROR + timeStamp() + "ERROR:  accepting connection: " + std::string(strerror(errno)) + std::string(RESET));
     clientSockets.push_back(clientSocket); // idk if we still need this
     std::clog << LOG << timeStamp() << "LOG: New client connected: [" << ipBinaryToString(client_addr.sin_addr.s_addr) << "].\n" << RESET;
     return (clientSocket);

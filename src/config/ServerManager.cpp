@@ -1,14 +1,27 @@
 #include "../../include/ServerManager.hpp"
 
-ServerManager::ServerManager() : epollFd(-1), events(100) {}
+ServerManager::ServerManager() : epollFd(-1), events(0) {}
 
-ServerManager::~ServerManager()
+void    ServerManager::shutDownManager()
 {
     if (epollFd != -1)
     {
         close(epollFd);
         epollFd = -1;
     }
+    for (size_t i = 0; i < servers.size(); i++)
+        delete servers[i];
+    servers.clear();
+    events.clear();
+    Clients.clear();
+    listeningSockets.clear();
+    serverPool.clear();
+}
+
+ServerManager::~ServerManager()
+{
+    std::clog << LOG << "LOG: Shutting down Cluster\n" << RESET;
+    shutDownManager();
 }
 
 bool    ServerManager::isListeningSocket(int fd)
@@ -33,7 +46,8 @@ Server* ServerManager::findServerBySocket(int fd)
         }
         else
         {
-            const std::vector<int>& clientSockets = servers[i]->getClientSockets();        
+            const std::vector<int>& clientSockets = servers[i]->getClientSockets();     
+            std::find(clientSockets.begin(), clientSockets.end(), fd);  
             for (int k = 0; k < clientSockets.size(); k++)
             {
                 if (clientSockets[k] == fd)
@@ -60,18 +74,15 @@ void    ServerManager::addListeningSockets(std::vector<Server*>& servers)
 {
     for (size_t i = 0; i < servers.size(); i++)
     {
-        std::clog << DEBUG << timeStamp() << "DEBUG: Server number " << i + 1 << '\n' << RESET;
         std::vector<Socket*> sockets = servers[i]->getListeningSockets();
         for (size_t j = 0; j < sockets.size(); j++)
         {
-            std::clog << DEBUG << timeStamp() << "DEBUG: Socket number " << j + 1 << " for Server number " << i + 1 << ":\n" << RESET;
             int listeningSocket = sockets[j]->getFd();
             setNonBlocking(listeningSocket);
             struct epoll_event event;
             memset(&event, 0, sizeof(event));
             event.events = EPOLLIN;
             event.data.fd = listeningSocket;
-            std::cout << DEBUG << "   -Socket's fd : " << listeningSocket << '\n' << RESET;
             if (epoll_ctl(epollFd, EPOLL_CTL_ADD, listeningSocket, &event) == -1)
                 throw std::runtime_error(ERROR + timeStamp() + "ERROR:  adding socket to epoll: " + std::string(strerror(errno)) + std::string(RESET));
             events.push_back(event);
@@ -116,13 +127,16 @@ void ServerManager::sendErrorResponse(int clientSocket, const std::string& error
 
 void ServerManager::sendResponse(int clientSocket) {
     std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\npain!";
-    if (send(clientSocket, response.c_str(), response.size(), 0) == -1) {
-        std::cerr << ERROR << timeStamp() << "ERROR: Sending data\n" << RESET;
-        closeConnection(clientSocket);
-    } else {
-        modifyEpollEvent(clientSocket, EPOLLIN);
-        Clients.at(clientSocket).getRequest().clear();     
-        std::clog << LOG << timeStamp() << "LOG: Sent a response succesfully to client socket N" << clientSocket << "\n" << RESET;
+    if (Clients.at(clientSocket).getRequest().isRequestComplete())
+    {
+        if (send(clientSocket, response.c_str(), response.size(), 0) == -1) {
+            std::cerr << ERROR << timeStamp() << "ERROR: Sending data\n" << RESET;
+            closeConnection(clientSocket);
+        } else {
+            // modifyEpollEvent(clientSocket, EPOLLIN);
+            Clients.at(clientSocket).getRequest().clear();     
+            std::clog << LOG << timeStamp() << "LOG: Sent a response succesfully to client socket N" << clientSocket << "\n" << RESET;
+        }
     }
 }
 
@@ -202,7 +216,7 @@ void ServerManager::handleEvent(const epoll_event& event) {
     else if (event.events & EPOLLOUT) { // ready to send 
         sendResponse(fd); 
     }
-    else if (event.events & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) {
+    if (event.events & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) {
         std::cerr << ERROR << timeStamp() << "ERROR: " << strerror(errno) << "\n" << RESET;
         closeConnection(fd);
     }
@@ -211,7 +225,7 @@ void ServerManager::handleEvent(const epoll_event& event) {
 void    ServerManager::eventsLoop() // events Loop (main loop)
 {
     while (1) {
-        int eventsNum = epoll_wait(epollFd, events.data(), events.size(), -1);
+        int eventsNum = epoll_wait(epollFd, events.data(), events.size(), 1000);
         if (eventsNum == -1){
             std::cerr << ERROR << timeStamp() << "ERROR: in epoll_wait: " << strerror(errno) << std::endl << RESET;
             continue ;
@@ -225,8 +239,30 @@ void    ServerManager::eventsLoop() // events Loop (main loop)
     }
 }
 
+static ServerManager *g_manager = NULL;
+
+void    ServerManager::handleSignal(int sig)
+{
+    (void) sig;
+
+    if (g_manager)
+        g_manager->shutDownManager();
+    exit(0);
+}
+
+void    ServerManager::handleSignals()
+{
+    g_manager = this;
+    signal(SIGINT, handleSignal);
+    signal(SIGTERM, handleSignal);
+    signal(SIGQUIT, handleSignal);
+}
+
+
+
 void  ServerManager::initServers()
 {
+    handleSignals();
     for (size_t i = 0; i < serverPool.size(); i++)
     {
         try {    

@@ -8,9 +8,7 @@ void  Socket::create()
   if (fd == -1)
       throw std::runtime_error("ERROR:  creating socket: " + std::string(strerror(errno)));
   int opt = 1;
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1
-    || setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1
-    || setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == -1)
+  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_KEEPALIVE, &opt, sizeof(opt)) == -1)
     throw std::runtime_error("ERROR:  setting socket opt: " + std::string(strerror(errno)));
 }
 

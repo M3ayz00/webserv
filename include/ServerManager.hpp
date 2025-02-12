@@ -18,16 +18,15 @@
             void    initEpoll();
             void    eventsLoop();
 
-            void           handleEvent(const epoll_event& event);
-            void           handleConnections(int listeningSocket);
-            void           handleRequest(int clientSocket);
-            void           readRequest(Client& Client);
-            void           sendResponse(int clientSocket);
+            void    handleEvent(const epoll_event& event);
+            void    handleConnections(int listeningSocket);
+            void    handleRequest(int clientSocket);
+            void    readRequest(Client& Client);
+            void    sendResponse(int clientSocket);
 
-            void        processRequest(int clientSocket, const std::string& request);
-            void        modifyEpollEvent(int fd, uint32_t events);
-            void        sendErrorResponse(int clientSocket, const std::string& error);
-            void        closeConnection(int fd);
+            void    modifyEpollEvent(int fd, uint32_t events);
+            void    sendErrorResponse(int clientSocket, const std::string& error);
+            void    closeConnection(int fd);
 
             void    addListeningSockets(std::vector<Server*>& servers);
             bool    isListeningSocket(int fd);
@@ -35,11 +34,12 @@
 
             Server* findServerBySocket(int fd);
 
-            void    handleRequests(int clientSocket);
-            void    generateResponse(HttpRequest& request);
 
             void    setNonBlocking(int fd);
-        
+
+            void    handleSignals();
+            static void    handleSignal(int sig);
+            void    shutDownManager();
         public  :
             ServerManager();
             ServerManager(const std::vector<Config>& _serverPool);
