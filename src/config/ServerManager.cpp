@@ -133,8 +133,8 @@ void ServerManager::sendResponse(int clientSocket) {
             std::cerr << ERROR << timeStamp() << "ERROR: Sending data\n" << RESET;
             closeConnection(clientSocket);
         } else {
-            // modifyEpollEvent(clientSocket, EPOLLIN);
-            Clients.at(clientSocket).getRequest().clear();     
+            modifyEpollEvent(clientSocket, EPOLLIN);
+            Clients.at(clientSocket).getRequest().clear(); 
             std::clog << LOG << timeStamp() << "LOG: Sent a response succesfully to client socket N" << clientSocket << "\n" << RESET;
         }
     }
@@ -207,7 +207,7 @@ void ServerManager::handleRequest(int clientSocket) {
 void ServerManager::handleEvent(const epoll_event& event) {
     int fd = event.data.fd;
     if (event.events & EPOLLIN) { // ready to recv
-        if (isListeningSocket(fd)) { 
+        if (isListeningSocket(fd)) {
             handleConnections(fd); // accept Client Connection
         }else{
             handleRequest(fd); // tkalef a m3ayzo
@@ -225,7 +225,7 @@ void ServerManager::handleEvent(const epoll_event& event) {
 void    ServerManager::eventsLoop() // events Loop (main loop)
 {
     while (1) {
-        int eventsNum = epoll_wait(epollFd, events.data(), events.size(), 1000);
+        int eventsNum = epoll_wait(epollFd, events.data(), events.size(), -1);
         if (eventsNum == -1){
             std::cerr << ERROR << timeStamp() << "ERROR: in epoll_wait: " << strerror(errno) << std::endl << RESET;
             continue ;
@@ -292,7 +292,7 @@ void ServerManager::initEpoll() {
     addListeningSockets(servers);
 }
 
-ServerManager::ServerManager(const std::vector<Config>& _serverPool) : serverPool(_serverPool), epollFd(-1), events(100)
+ServerManager::ServerManager(const std::vector<Config>& _serverPool) : serverPool(_serverPool), epollFd(-1), events(0)
 {
     initServers();
     initEpoll();

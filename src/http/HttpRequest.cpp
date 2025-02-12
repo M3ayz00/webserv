@@ -101,10 +101,8 @@ size_t    HttpRequest::parse(const char* buffer, size_t bufferLen)
     }
     catch(const HttpIncompleteRequest& e)
     {
-        std::cout << "Processing...\n";
         return (bytesReceived);
     }
-    std::cout << "Processing...\n";
     return (bytesReceived);
 }
 

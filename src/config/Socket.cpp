@@ -44,6 +44,6 @@ Socket::~Socket()
   if (fd != -1)
   {
     close(fd);
-    std::cerr << "LOG: closing file descriptor " << fd << '\n';
+    std::cerr << LOG << timeStamp() << "LOG: closing file descriptor " << fd << '\n' << RESET;
   }
 }

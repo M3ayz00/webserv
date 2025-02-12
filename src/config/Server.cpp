@@ -57,7 +57,10 @@ void Server::shutdownServer()
         socket++)
         delete *socket;
     for (size_t i = 0; i < clientSockets.size(); ++i)
+    {
+        std::clog << LOG << timeStamp() << "LOG: Closing file descriptor " << clientSockets[i] << "\n" << RESET;
         close(clientSockets[i]);
+    }
     std::clog << LOG << timeStamp() << "LOG: Server shut down.\n" << RESET ;
 }
 
