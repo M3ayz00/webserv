@@ -70,19 +70,6 @@ std::vector<Config> parseConfigFile(std::string configFile) {
     return (serverPool);
 }
 
-void    handleSignal(int sig)
-{
-    (void) sig;
-    exit(1);
-}
-
-void    handlesignals(void)
-{
-    signal(SIGINT, handleSignal);
-    signal(SIGQUIT, handleSignal);
-    signal(SIGTERM, handleSignal);
-}
-
 int main(int ac, char **av) {
     std::string config_path = (ac > 1) ? av[1] : "webserv.conf";
     std::string configFile;

@@ -1,5 +1,7 @@
 #include "../../include/ServerManager.hpp"
 
+static ServerManager *g_manager = NULL;
+
 ServerManager::ServerManager() : epollFd(-1), events(0) {}
 
 void    ServerManager::shutDownManager()
@@ -20,8 +22,25 @@ void    ServerManager::shutDownManager()
 
 ServerManager::~ServerManager()
 {
-    std::clog << LOG << "LOG: Shutting down Cluster\n" << RESET;
+    std::clog << INFO << "INFO: Shutting down Cluster\n" << RESET;
     shutDownManager();
+}
+
+void    ServerManager::handleSignal(int sig)
+{
+    (void) sig;
+
+    if (g_manager)
+        g_manager->shutDownManager();
+    exit(0);
+}
+
+void    ServerManager::handleSignals()
+{
+    g_manager = this;
+    signal(SIGINT, handleSignal);
+    signal(SIGTERM, handleSignal);
+    signal(SIGQUIT, handleSignal);
 }
 
 bool    ServerManager::isListeningSocket(int fd)
@@ -122,6 +141,10 @@ void ServerManager::sendErrorResponse(int clientSocket, const std::string& error
     if (send(clientSocket, error.c_str(), error.size(), 0) == -1) {
         std::cerr << ERROR << timeStamp() << "ERROR: sending error response to client socket N" << clientSocket << "\n" << RESET;
         closeConnection(clientSocket);
+    }else {
+        modifyEpollEvent(clientSocket, EPOLLIN);
+        Clients.at(clientSocket).getRequest().clear(); 
+        std::clog << INFO << timeStamp() << "INFO: Sent an error response succesfully to client socket N" << clientSocket << "\n" << RESET;
     }
 }
 
@@ -135,7 +158,7 @@ void ServerManager::sendResponse(int clientSocket) {
         } else {
             modifyEpollEvent(clientSocket, EPOLLIN);
             Clients.at(clientSocket).getRequest().clear(); 
-            std::clog << LOG << timeStamp() << "LOG: Sent a response succesfully to client socket N" << clientSocket << "\n" << RESET;
+            std::clog << INFO << timeStamp() << "INFO: Sent a response succesfully to client socket N" << clientSocket << "\n" << RESET;
         }
     }
 }
@@ -239,24 +262,6 @@ void    ServerManager::eventsLoop() // events Loop (main loop)
     }
 }
 
-static ServerManager *g_manager = NULL;
-
-void    ServerManager::handleSignal(int sig)
-{
-    (void) sig;
-
-    if (g_manager)
-        g_manager->shutDownManager();
-    exit(0);
-}
-
-void    ServerManager::handleSignals()
-{
-    g_manager = this;
-    signal(SIGINT, handleSignal);
-    signal(SIGTERM, handleSignal);
-    signal(SIGQUIT, handleSignal);
-}
 
 
 

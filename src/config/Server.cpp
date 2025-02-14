@@ -35,7 +35,7 @@ int Server::acceptConnection(int listeningSocket)
     if (clientSocket == -1)
         throw std::runtime_error(ERROR + timeStamp() + "ERROR:  accepting connection: " + std::string(strerror(errno)) + std::string(RESET));
     clientSockets.push_back(clientSocket); // idk if we still need this
-    std::clog << LOG << timeStamp() << "LOG: New client connected: [" << ipBinaryToString(client_addr.sin_addr.s_addr) << "].\n" << RESET;
+    std::clog << INFO << timeStamp() << "INFO: New client connected: [" << ipBinaryToString(client_addr.sin_addr.s_addr) << "].\n" << RESET;
     return (clientSocket);
 }
 
@@ -44,7 +44,7 @@ void Server::closeConnection(int client_fd)
     std::vector<int>::iterator it = std::find(clientSockets.begin(), clientSockets.end(), client_fd);
     if (it != clientSockets.end())
     {
-        std::clog << LOG << timeStamp() << "LOG: Client disconnected, client socket N" << client_fd <<".\n" << RESET;
+        std::clog << INFO << timeStamp() << "INFO: Client disconnected, client socket N" << client_fd <<".\n" << RESET;
         close(client_fd);
         clientSockets.erase(it);
     }
@@ -58,16 +58,16 @@ void Server::shutdownServer()
         delete *socket;
     for (size_t i = 0; i < clientSockets.size(); ++i)
     {
-        std::clog << LOG << timeStamp() << "LOG: Closing file descriptor " << clientSockets[i] << "\n" << RESET;
+        std::clog << DEBUG << timeStamp() << "DEBUG: Closing file descriptor " << clientSockets[i] << "\n" << RESET;
         close(clientSockets[i]);
     }
-    std::clog << LOG << timeStamp() << "LOG: Server shut down.\n" << RESET ;
+    std::clog << INFO << timeStamp() << "INFO: Server shut down.\n" << RESET ;
 }
 
 
 Server::~Server()
 {
-    std::cerr << LOG << timeStamp() << "LOG: Server shutting down...\n" << RESET ;
+    std::cerr << INFO << timeStamp() << "INFO: Server shutting down...\n" << RESET ;
     shutdownServer();
 }
 

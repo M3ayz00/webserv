@@ -33,7 +33,6 @@
 #define RESET "\033[0m"
 #define ERROR "\033[31m"
 #define INFO "\033[36m" 
-#define LOG "\033[34m" 
 #define DEBUG "\033[32m"  
 
 std::string& strTrim(std::string& str);

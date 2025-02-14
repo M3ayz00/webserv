@@ -2,52 +2,6 @@
 #include <algorithm>
 #include <stdexcept>
 
-HttpRequest::HttpRequest(const std::string &request)
-{
-    std::istringstream iss(request);
-    std::string requestLine;
-    std::getline(iss, requestLine);
-    if (requestLine.empty() || requestLine[requestLine.size() - 1] != '\r')
-        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line4");
-    std::istringstream oss(requestLine);
-    oss >> method >> uri >> version;
-    if ((method.empty() || uri.empty() || version.empty()))
-        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line5");
-    std::cout << "LOG: received request:\n      \"" << method << "\" " <<  "\"" << uri << "\" " <<  "\"" << version << "\" " << std::endl; 
-    if ((method == "GET" || method == "POST" || method == "DELETE")
-        && (version == "HTTP/1.0" || version == "HTTP/1.1"))
-    {
-        while (std::getline(iss, requestLine)) {
-            if (requestLine == "\r" || requestLine.empty()) break;
-            std::size_t pos = requestLine.find(':');
-            std::cout << "      " << requestLine << std::endl;
-            if (pos == std::string::npos)
-                throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 25\r\n\r\nMalformed request header");
-            std::string key = requestLine.substr(0, pos);
-            std::string value = requestLine.substr(pos + 1);
-            key.erase(key.find_last_not_of(" \t\r\n") + 1);
-            value.erase(0, value.find_first_not_of(" \t\r\n"));        
-            if (value.empty())
-                throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 19\r\n\r\nEmpty header value");
-            headers[toLowerCase(key)] = value;
-        }
-        if (method == "POST")
-        {
-            // size_t contentLen = stoi(headers["content-length"]);
-            std::string body;
-            while (std::getline(iss, requestLine))
-                body += requestLine.substr(0, requestLine.find_last_not_of("\r") + 1);
-            std::cout << "==>BODY : \n" << body << "\n_________________\n" << std::endl;
-            // if (body.size() == contentLen)
-            this->body = body;
-            // throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line");
-        }
-    }
-    else
-        throw std::runtime_error("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line6");
-}
-
-
 HttpRequest::HttpRequest() : state(REQUESTLINE), _pos(0), _bufferLen(0) {}
 
 HttpRequest::~HttpRequest() {}
@@ -86,18 +40,8 @@ size_t    HttpRequest::parse(const char* buffer, size_t bufferLen)
             bytesReceived += parseHeaders();
         if (state == BODY) 
             bytesReceived += parseBody(); 
-        if (state == COMPLETE) 
-        {
-            std::cout << DEBUG << "FULL PARSED REQUEST : \n"
-                << "          -method: " << method 
-                <<"\n          -uri: " << uri
-                <<"\n          -version: " << version
-                <<"\n          -headers:\n";
-            for (auto header : headers)
-                std::cout << "              -" << header.first << ": " << header.second << "\n";
-            std::cout << "          -body: \n{" << body << "\n}\n" << RESET;  
+        if (state == COMPLETE)
             return 0;
-        }
     }
     catch(const HttpIncompleteRequest& e)
     {
@@ -115,9 +59,9 @@ size_t    HttpRequest::parseRequestLine()
     size_t firstSpace = line.find(' ');
     size_t secondSpace = line.find(' ', firstSpace + 1);
     if (firstSpace == std::string::npos || secondSpace == std::string::npos)
-        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line1")); 
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line")); 
     if (line.find(' ', secondSpace + 1) != std::string::npos)
-        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line2")); 
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line")); 
     method = line.substr(0, firstSpace);
     uri = line.substr(firstSpace + 1, secondSpace - firstSpace - 1);
     version = line.substr(secondSpace + 1);
@@ -132,7 +76,7 @@ size_t    HttpRequest::parseRequestLine()
 void    HttpRequest::validateMethod()
 {
     if (method != "GET" && method != "DELETE" && method != "POST")
-        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nMalformed request line3"));
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 22\r\n\r\nMalformed request line"));
 }
 
 void    HttpRequest::validateURI()
@@ -142,22 +86,21 @@ void    HttpRequest::validateURI()
     std::pair<std::string, std::string> pathAndQuery = splitKeyValue(uri, '?');
     uriPath = pathAndQuery.first;
     std::string query = pathAndQuery.second;
-    if (!isAbsoluteURI())
-    {
-        if (uriPath[0] != '/')
-            throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 7\r\n\r\nBad URI"));
-    }
-    else
-    {
-        size_t schemeEnd = uriPath.find('/');
-        if (schemeEnd != std::string::npos)
-            uriPath = uriPath.substr(schemeEnd + 2);
-        else
-            uriPath = "/";
-    }
+    std::cout <<DEBUG << "DEBUG: URI (before decoding/normalizing): " << uri << "\n" << RESET;
+    if (isAbsoluteURI())
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 7\r\n\r\nBad URI"));
+    if (uriPath.empty() ||  uriPath[0] != '/')
+        throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 7\r\n\r\nBad URI"));
     uriPath = decodeAndNormalize();
+    std::cout << DEBUG << "DEBUG: URI (after decoding/normalizing): " << uriPath << "\n" << RESET;
     if (!query.empty())
+    {
         uriQueryParams = decodeAndParseQuery(query);
+        std::cout << DEBUG << "DEBUG: uri params: \n";
+        for (auto param : uriQueryParams)
+            std::cout << "        -" << param.first << ": " << param.second << "\n";
+        std::cout << RESET;
+    }
 }
 
 std::map<std::string, std::string> HttpRequest::decodeAndParseQuery(std::string& query)
@@ -172,7 +115,7 @@ std::map<std::string, std::string> HttpRequest::decodeAndParseQuery(std::string&
         value = (pos != std::string::npos ? queryParam.substr(pos + 1) : "");
         if (value.find('#') != std::string::npos)
             value.erase(value.find('#'));
-        queryParams[key] = value;//decode this
+        queryParams[decode(key)] = decode(value);//decode this
     }
     return (queryParams);
 }
@@ -186,9 +129,9 @@ std::string HttpRequest::decode(std::string& encoded)
         {
             if (i + 2 >= encoded.size())
                 throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 24\r\n\r\nInvalid percent-encoding"));
-            if (!isHexDigit(encoded[i + 1]) || !isHexDigit(encoded[i + 1]))                
+            if (!isHexDigit(encoded[i + 1]) || !isHexDigit(encoded[i + 2]))                
                 throw (HttpRequestError("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 24\r\n\r\nInvalid percent-encoding"));
-            decoded += hexToValue(encoded[i + 1]) * 16 + hexToValue(encoded[i + 2]);
+            decoded += static_cast<char>(hexToValue(encoded[i + 1]) * 16 + hexToValue(encoded[i + 2]));
             i += 2;
         }
         else if (!isURIchar(encoded[i]))
@@ -213,7 +156,7 @@ std::string HttpRequest::normalize(std::string& decoded)
             if (!normalizedSegments.empty()) 
                 normalizedSegments.pop_back();
         }
-        else 
+        else
             normalizedSegments.push_back(segment);
     }
     for (size_t i = 0; i < normalizedSegments.size(); i++)
@@ -238,7 +181,7 @@ std::string HttpRequest::decodeAndNormalize()
 
 bool    HttpRequest::isAbsoluteURI()
 {
-    return (uri.find("http://") == 0);
+    return (uri.find("http://") == 0 || uri.find("https://") == 0);
 }
 
 bool    HttpRequest::isURIchar(char c)
