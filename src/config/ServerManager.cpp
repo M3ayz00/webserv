@@ -1,8 +1,9 @@
 #include "../../include/ServerManager.hpp"
+#include "../../include/HttpResponse.hpp"
 
 static ServerManager *g_manager = NULL;
 
-ServerManager::ServerManager() : epollFd(-1), events(0) {}
+ServerManager::ServerManager() : epollFd(-1), events() {}
 
 void    ServerManager::shutDownManager()
 {
@@ -125,6 +126,7 @@ void ServerManager::closeConnection(int fd) {
     if (server) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
         server->closeConnection(fd);
+        Clients.erase(fd);
     }
 }
 
@@ -137,29 +139,92 @@ void ServerManager::modifyEpollEvent(int fd, uint32_t events) {
     }
 }
 
-void ServerManager::sendErrorResponse(int clientSocket, const std::string& error) {
-    if (send(clientSocket, error.c_str(), error.size(), 0) == -1) {
-        std::cerr << ERROR << timeStamp() << "ERROR: sending error response to client socket N" << clientSocket << "\n" << RESET;
-        closeConnection(clientSocket);
-    }else {
-        modifyEpollEvent(clientSocket, EPOLLIN);
-        Clients.at(clientSocket).getRequest().clear(); 
-        std::clog << INFO << timeStamp() << "INFO: Sent an error response succesfully to client socket N" << clientSocket << "\n" << RESET;
-    }
-}
 
 void ServerManager::sendResponse(int clientSocket) {
-    std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\npain!";
-    if (Clients.at(clientSocket).getRequest().isRequestComplete())
+    std::map<int, Client>::iterator It = Clients.find(clientSocket);
+    if (It == Clients.end()) return;
+    Client& client = It->second;
+    HttpResponse& response = client.getResponse();
+    std::cout << "client found and ready to send\n";
+
+
+    switch (client.getClientState())
     {
-        if (send(clientSocket, response.c_str(), response.size(), 0) == -1) {
-            std::cerr << ERROR << timeStamp() << "ERROR: Sending data\n" << RESET;
-            closeConnection(clientSocket);
-        } else {
-            modifyEpollEvent(clientSocket, EPOLLIN);
-            Clients.at(clientSocket).getRequest().clear(); 
-            std::clog << INFO << timeStamp() << "INFO: Sent a response succesfully to client socket N" << clientSocket << "\n" << RESET;
+        case GENERATING_RESPONSE: {
+            client.setKeepAlive(client.getRequest().getHeaderValue("Connection") != "close");
+            client.sendBuffer = response.responseHeaders;
+            response.responseHeaders.clear();
+            client.setState(SENDING_HEADERS);
         }
+        break;
+        case SENDING_HEADERS: {
+            modifyEpollEvent(clientSocket, EPOLLOUT);
+            if (response.statusCode >= 400 || response.statusCode == 301) {
+                client.sendBuffer += response.responseBody;
+            }
+            ssize_t bytesSent = send(clientSocket,client.sendBuffer.c_str() + client.sendOffset,
+                                                    client.sendBuffer.size() - client.sendOffset, 0);
+            if (bytesSent < 0) {
+                return closeConnection(clientSocket);
+            }
+            client.sendOffset += bytesSent;
+            if (client.sendOffset >= client.sendBuffer.size()) {
+                client.sendBuffer.clear();
+                client.sendOffset = 0;
+                client.setState(SENDING_BODY);
+             if (response.statusCode >= 400 || response.statusCode == 301)
+                client.setState(COMPLETED);
+            }
+        }
+        break;
+        case SENDING_BODY: {
+            modifyEpollEvent(clientSocket, EPOLLOUT);
+            if (client.sendBuffer.empty()) {
+                if (!client.file.is_open()) {
+                    client.file.open(client.getRequest().getUriPath().c_str(), std::ios::binary);
+                    if (!client.file.is_open()) {
+                        client.setState(COMPLETED);
+                        break;
+                    }
+                }
+
+                char buffer[8192];
+                client.file.read(buffer, 8192);
+                std::streamsize bytesRead = client.file.gcount();
+                
+                if (bytesRead > 0) {
+                    client.sendBuffer.append(buffer, bytesRead);
+                } else {
+                    client.setState(COMPLETED);
+                }
+            }
+            ssize_t bytesSent = send(clientSocket, client.sendBuffer.c_str() + client.sendOffset,
+                                                    client.sendBuffer.size() - client.sendOffset, 0);
+            if (bytesSent < 0) {
+                return closeConnection(clientSocket);
+            }
+            client.sendOffset += bytesSent;
+            if (client.sendOffset >= client.sendBuffer.size()) {
+                client.sendBuffer.clear();
+                client.sendOffset = 0;
+            }
+        }
+        break;
+        case COMPLETED: {
+            client.file.close();
+            client.getRequest().reset();
+            client.getResponse().reset();
+            
+            if (client.shouldKeepAlive()) {
+                client.setState(READING_REQUEST);
+                modifyEpollEvent(clientSocket, EPOLLIN);
+            } else {
+                closeConnection(clientSocket);
+            }
+        }
+        break;
+        default:
+            break;
     }
 }
 
@@ -169,10 +234,9 @@ void    ServerManager::handleConnections(int listeningSocket)
     try {
         Server* server = findServerBySocket(listeningSocket);
         int clientFD = server->acceptConnection(listeningSocket);
-        if (clientFD == -1)
-            return ;
-        addToEpoll(clientFD);
-        Clients.insert(std::pair<int, Client>(clientFD, Client(clientFD)));
+        if (clientFD == -1) return ;
+        addToEpoll(clientFD);        
+        Clients.insert(std::make_pair(clientFD, Client(clientFD, server->getserverConfig())));
     }
     catch(const std::exception& e) {
         std::cerr << e.what() << '\n';
@@ -181,63 +245,62 @@ void    ServerManager::handleConnections(int listeningSocket)
 
 
 void ServerManager::readRequest(Client& Client) {
-    // request 7atha f client.request; muhim chuf kidir hhh
-    const size_t bufferSize = 4096;
+    const size_t bufferSize = 8192; // 8192
     char buffer[bufferSize];
     int bytesReceived;
+    HttpRequest& request = Client.getRequest();
 
     bytesReceived = recv(Client.getFd(), buffer, bufferSize, 0);
     if (bytesReceived == -1) {
         std::cerr << ERROR << timeStamp() << "ERROR: receiving data in client socket N" << Client.getFd() << "\n" << RESET;
-        closeConnection(Client.getFd());
-        return ;
+        return closeConnection(Client.getFd());
     }
     else if (bytesReceived == 0) {
-        closeConnection(Client.getFd());
-        return ;
+        return closeConnection(Client.getFd());
     }
-    Client.getRequest().getRequestBuffer().append(buffer, bytesReceived);
 
-    std::string request;
-    request = Client.getRequest().getRequestBuffer();
-    bytesReceived = Client.getRequest().parse(request.c_str(), request.size());
+    std::string& requestBuffer = request.getRequestBuffer();
+    requestBuffer.append(buffer, bytesReceived);
+    request.parse(requestBuffer.c_str(), requestBuffer.size());
     if (bytesReceived > 0)
-        request.erase(0, bytesReceived);
-    if (Client.getRequest().isRequestComplete())
-    {
-        modifyEpollEvent(Client.getFd(), EPOLLOUT);
-        return ;
-    }
+        requestBuffer.erase(0, bytesReceived);
 }
 
 // here where u should parse the request
-void ServerManager::handleRequest(int clientSocket) {
-    std::map<int, Client>::iterator Client = Clients.find(clientSocket);
-
-    if (Client != Clients.end())
-    {
-        // hna l3b kima bghiti
-        try {
-            readRequest(Client->second);
-        } catch (const std::exception& e) {
-            sendErrorResponse(clientSocket, e.what());
+void ServerManager::handleRequest(int clientSocket)
+{
+    std::map<int, Client>::iterator It = Clients.find(clientSocket);
+    if (It == Clients.end()) return ;
+    
+    Client& client = It->second;
+    HttpRequest& request = client.getRequest();
+    HttpResponse& response = client.getResponse();
+    if (client.getClientState() == READING_REQUEST) {
+        readRequest(client);
+        
+        if (request.getState() == COMPLETE) {
+            response.generateResponse(request);
+            client.setState(GENERATING_RESPONSE);
+            modifyEpollEvent(clientSocket, EPOLLOUT);
         }
     }
-    // just skip if client not found.
 }
 
 
 void ServerManager::handleEvent(const epoll_event& event) {
     int fd = event.data.fd;
     if (event.events & EPOLLIN) { // ready to recv
+        std::cout << "ready to READ data\n";
         if (isListeningSocket(fd)) {
-            handleConnections(fd); // accept Client Connection
+            handleConnections(fd);
         }else{
-            handleRequest(fd); // tkalef a m3ayzo
+            handleRequest(fd);
         }
     }
-    else if (event.events & EPOLLOUT) { // ready to send 
-        sendResponse(fd); 
+    if (event.events & EPOLLOUT) { 
+        std::cout << "ready to write data\n";
+        sendResponse(fd);
+        
     }
     if (event.events & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) {
         std::cerr << ERROR << timeStamp() << "ERROR: " << strerror(errno) << "\n" << RESET;
@@ -261,8 +324,6 @@ void    ServerManager::eventsLoop() // events Loop (main loop)
         }
     }
 }
-
-
 
 
 void  ServerManager::initServers()

@@ -4,6 +4,7 @@
 Server::Server(const Config& serverConfig)
 {
     // give this func another name
+    this->serverConfig = serverConfig;
     std::set<int>::const_iterator it = serverConfig.ports.begin();
     while (it != serverConfig.ports.end())
     {

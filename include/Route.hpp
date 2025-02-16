@@ -16,4 +16,7 @@ public:
 
 public:
     Route();
+    std::string& getRoot() { return root; }
+    std::string& getDefaultFile() { return default_file; }
+    bool        getAutoIndexState () {return dir_listing; }
 };

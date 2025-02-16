@@ -5,7 +5,7 @@ NAME = server
 
 SRCS = src/http/HttpRequest.cpp src/config/Server.cpp src/Common.cpp src/config/Socket.cpp \
 		src/config/Config.cpp src/Route.cpp src/Webserv.cpp src/config/ServerManager.cpp \
-		src/Client.cpp 
+		src/Client.cpp src/http/HttpResponse.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 
