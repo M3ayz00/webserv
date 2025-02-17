@@ -339,8 +339,10 @@ std::string HttpRequest::readLine()
 std::pair<std::string, std::string> HttpRequest::splitKeyValue(const std::string& toSplit, char delim)
 {
     size_t keyValue = toSplit.find(delim);
+    if (keyValue == std::string::npos)
+        throw 400;
     std::string key = toSplit.substr(0, keyValue);
-    std::string value = (keyValue != std::string::npos ? toSplit.substr(keyValue + 1) : "");
+    std::string value = toSplit.substr(keyValue + 1);
     return (std::make_pair(key, value));
 }
 

@@ -302,7 +302,6 @@ void ServerManager::handleEvent(const epoll_event& event) {
     if (event.events & EPOLLOUT) { 
         std::cout << "ready to write data\n";
         sendResponse(fd);
-        
     }
     if (event.events & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) {
         std::cerr << ERROR << timeStamp() << "ERROR: " << strerror(errno) << "\n" << RESET;
