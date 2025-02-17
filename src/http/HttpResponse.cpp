@@ -187,9 +187,13 @@ void HttpResponse::GET(HttpRequest& request) {
     unsigned code = checkFilePerms(path);
 
     if (isDirectory(path)) {
+        std::cout << "path  = " << path << std::endl;
         if (path.back() != '/') {
+            std::cout << "should redirect to " << request.getOriginalUri() << "/" << std::endl;
+            
             statusCode = 301;
-            responseBody = "HTTP/1.1 301 Moved Permanently\r\nLocation: " + request.getOriginalUri() + "/\r\n\r";
+            responseHeaders = "HTTP/1.1 301 Moved Permanently\r\nLocation: " + request.getOriginalUri() + "/\r\n\r";
+            responseBody.clear();
             return ;
         }
         std::string defaultFile = request.getDefaultIndex();
@@ -238,7 +242,6 @@ void    HttpResponse::setErrorPage(std::map<int, std::string>& ErrPages) {
         contentLength = getFileContentLength(errPagePath);
         if (contentLength == -1) { statusCode = 500; }
         Date =  getCurrentDateHeader();
-        std::cout << "Connection type => " << Connection << std::endl;
         responseHeaders = combineHeaders();
         unsigned code = checkFilePerms(errPagePath);
         if (code == 200) {
@@ -271,7 +274,6 @@ void  HttpResponse::generateResponse(HttpRequest& request) {
     statusCode = request.getStatusCode();
     Config& conf = request.getConfig();
     requestedContent = request.getUriPath();
-    std::cout << "requestedContent = " << requestedContent << std::endl; 
     if (statusCode >= 400) {
         setErrorPage(conf.getErrorPages());
     }

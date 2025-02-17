@@ -32,7 +32,8 @@ size_t    HttpRequest::parse(const char* buffer, size_t bufferLen)
     this->_bufferLen = bufferLen;
     this->_buffer = buffer;
     size_t bytesReceived = 0;
-
+    std::cout << "new request\n " << std::endl;
+    std::cout << "buffer = " << buffer << std::endl;
     try
     {
         if (state == REQUESTLINE)
@@ -46,6 +47,12 @@ size_t    HttpRequest::parse(const char* buffer, size_t bufferLen)
         }
         if (state == COMPLETE)
             return 0;
+    }
+    catch (int code)
+    {
+        setStatusCode(code);
+        state = COMPLETE;
+        return 0;
     }
     catch(const HttpIncompleteRequest& e)
     {
@@ -95,7 +102,7 @@ void    HttpRequest::RouteURI()
         autoIndex = routeConf.getAutoIndexState();    
         if (routeKey == "/") {
             if (size_t pos = uriPath.find('/') != std::string::npos)
-                uriPath.replace(pos-1, 1, routeConf.getRoot()); // back to it later
+                uriPath.replace(pos-1, 1, routeConf.getRoot()+"/"); // back to it later
         }
         else {
             if (size_t pos = uriPath.find(routeKey) != std::string::npos) {

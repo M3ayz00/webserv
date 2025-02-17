@@ -143,11 +143,10 @@ void ServerManager::modifyEpollEvent(int fd, uint32_t events) {
 void ServerManager::sendResponse(int clientSocket) {
     std::map<int, Client>::iterator It = Clients.find(clientSocket);
     if (It == Clients.end()) return;
+    
     Client& client = It->second;
     HttpResponse& response = client.getResponse();
-    std::cout << "client found and ready to send\n";
-
-
+    
     switch (client.getClientState())
     {
         case GENERATING_RESPONSE: {
@@ -156,29 +155,26 @@ void ServerManager::sendResponse(int clientSocket) {
             response.responseHeaders.clear();
             client.setState(SENDING_HEADERS);
         }
-        break;
         case SENDING_HEADERS: {
-            modifyEpollEvent(clientSocket, EPOLLOUT);
-            if (response.statusCode >= 400 || response.statusCode == 301) {
+            if (response.statusCode >= 400) {
                 client.sendBuffer += response.responseBody;
             }
-            ssize_t bytesSent = send(clientSocket,client.sendBuffer.c_str() + client.sendOffset,
-                                                    client.sendBuffer.size() - client.sendOffset, 0);
-            if (bytesSent < 0) {
+            ssize_t bytesSent = send(clientSocket,client.sendBuffer.c_str() + client.sendOffset,client.sendBuffer.size() - client.sendOffset, 0);
+            if (bytesSent < 0)
                 return closeConnection(clientSocket);
-            }
             client.sendOffset += bytesSent;
             if (client.sendOffset >= client.sendBuffer.size()) {
                 client.sendBuffer.clear();
                 client.sendOffset = 0;
                 client.setState(SENDING_BODY);
-             if (response.statusCode >= 400 || response.statusCode == 301)
+            }
+            if (response.statusCode >= 400 || response.statusCode == 301) {
                 client.setState(COMPLETED);
+                goto complete;
             }
         }
         break;
         case SENDING_BODY: {
-            modifyEpollEvent(clientSocket, EPOLLOUT);
             if (client.sendBuffer.empty()) {
                 if (!client.file.is_open()) {
                     client.file.open(client.getRequest().getUriPath().c_str(), std::ios::binary);
@@ -210,11 +206,17 @@ void ServerManager::sendResponse(int clientSocket) {
             }
         }
         break;
+        complete:
         case COMPLETED: {
             client.file.close();
             client.getRequest().reset();
             client.getResponse().reset();
             
+            if (response.statusCode == 301) {
+                client.setState(READING_REQUEST);
+                closeConnection(clientSocket);
+                return ;
+            }
             if (client.shouldKeepAlive()) {
                 client.setState(READING_REQUEST);
                 modifyEpollEvent(clientSocket, EPOLLIN);
@@ -245,14 +247,14 @@ void    ServerManager::handleConnections(int listeningSocket)
 
 
 void ServerManager::readRequest(Client& Client) {
-    const size_t bufferSize = 8192; // 8192
+    const size_t bufferSize = 8192;
     char buffer[bufferSize];
     int bytesReceived;
     HttpRequest& request = Client.getRequest();
 
     bytesReceived = recv(Client.getFd(), buffer, bufferSize, 0);
     if (bytesReceived == -1) {
-        std::cerr << ERROR << timeStamp() << "ERROR: receiving data in client socket N" << Client.getFd() << "\n" << RESET;
+        std::clog << ERROR << timeStamp() << "ERROR: receiving data in client socket N" << Client.getFd() << "\n" << RESET;
         return closeConnection(Client.getFd());
     }
     else if (bytesReceived == 0) {
@@ -261,7 +263,7 @@ void ServerManager::readRequest(Client& Client) {
 
     std::string& requestBuffer = request.getRequestBuffer();
     requestBuffer.append(buffer, bytesReceived);
-    request.parse(requestBuffer.c_str(), requestBuffer.size());
+    bytesReceived = request.parse(requestBuffer.c_str(), requestBuffer.size());
     if (bytesReceived > 0)
         requestBuffer.erase(0, bytesReceived);
 }
@@ -279,8 +281,8 @@ void ServerManager::handleRequest(int clientSocket)
         readRequest(client);
         
         if (request.getState() == COMPLETE) {
-            response.generateResponse(request);
             client.setState(GENERATING_RESPONSE);
+            response.generateResponse(request);
             modifyEpollEvent(clientSocket, EPOLLOUT);
         }
     }
