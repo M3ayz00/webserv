@@ -102,6 +102,7 @@ class HttpRequest
 
         void    reset() {
             statusCode = 200;
+            request.clear();
             method.clear();
             uri.clear() ;
             uriPath.clear();
@@ -112,5 +113,9 @@ class HttpRequest
             uriQueryParams.clear();
             autoIndex = false;
             state = REQUESTLINE;
+            bodyStart = 0;
+            _pos = 0;
+            _bufferLen = 0;
+            _buffer = NULL;
         }
 };
