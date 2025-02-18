@@ -112,10 +112,19 @@ void    HttpRequest::RouteURI()
     }
     setStatusCode(checkFilePerms(uriPath)); 
 }
+
+/*
+    When a request method is received
+   that is unrecognized or not implemented by an origin server, the
+   origin server SHOULD respond with the 501 (Not Implemented) status
+   code.  When a request method is received that is known by an origin
+   server but not allowed for the target resource, the origin server
+   SHOULD respond with the 405 (Method Not Allowed) status code.
+*/
 void    HttpRequest::validateMethod()
 {
     if (method != "GET" && method != "DELETE" && method != "POST")
-        throw 400;
+        throw 501;
 }
 
 void    HttpRequest::validateURI()
@@ -227,7 +236,7 @@ std::string HttpRequest::decodeAndNormalize()
     while (std::getline(iss, segment, '/'))
         decodedAndNormalized += "/" + decode(segment);
     std::string normalized = normalize(decodedAndNormalized); 
-    if (hasTrailingSlash)
+    if (!hasTrailingSlash)
         normalized += "/";
     return (normalized);
 }
@@ -259,8 +268,8 @@ size_t    HttpRequest::parseHeaders()
         std::pair<std::string, std::string> keyValue = splitKeyValue(line, ':');
         std::string key = toLowerCase(keyValue.first);
         std::string value = strTrim(keyValue.second);
-        if (key.empty() || key.find_first_of(" \t") != std::string::npos || key.find_last_of(" \t") != std::string::npos)
-            throw 400;
+        // if (key.empty() || key.find_first_of(" \t") != std::string::npos || key.find_last_of(" \t") != std::string::npos)
+        //     throw 400;
         if (headers.find(key) != headers.end())
             headers[key] += "," + value;
         else
