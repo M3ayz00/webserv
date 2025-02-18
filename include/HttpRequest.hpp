@@ -58,6 +58,7 @@ class HttpRequest
         size_t    parseHeaders();
         size_t    parseBody();
         size_t    parseChunkedBody();
+        size_t    parseMultiPartBody();
         
         std::string readLine();
 

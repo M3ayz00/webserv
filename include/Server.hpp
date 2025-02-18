@@ -7,11 +7,7 @@
 class Server
 {
     private:
-        sockaddr_in server_addr;
-        int port;
-        std::vector<int> clientSockets;
         std::vector<Socket*> listeningSockets;
-        std::string host;
         Config serverConfig;
 
         void shutdownServer();
@@ -21,9 +17,7 @@ class Server
         ~Server();
 
         int acceptConnection(int listeningSocket);
-        void closeConnection(int client_fd);
 
         Config& getserverConfig() { return serverConfig; }
         const std::vector<Socket*>& getListeningSockets( void ) const;
-        const std::vector<int>& getClientSockets( void ) const;
 };

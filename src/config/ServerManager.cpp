@@ -55,24 +55,11 @@ Server* ServerManager::findServerBySocket(int fd)
         return (NULL);
     for (int i = 0; i < servers.size(); i++)
     {
-        if (isListeningSocket(fd))
+        const std::vector<Socket*>& listeningSockets = servers[i]->getListeningSockets();
+        for (int j = 0; j < listeningSockets.size(); j++)
         {
-            const std::vector<Socket*>& listeningSockets = servers[i]->getListeningSockets();
-            for (int j = 0; j < listeningSockets.size(); j++)
-            {
-                if (listeningSockets[j]->getFd() == fd)
-                    return (servers[i]);
-            }
-        }
-        else
-        {
-            const std::vector<int>& clientSockets = servers[i]->getClientSockets();     
-            std::find(clientSockets.begin(), clientSockets.end(), fd);  
-            for (int k = 0; k < clientSockets.size(); k++)
-            {
-                if (clientSockets[k] == fd)
-                    return (servers[i]);
-            }
+            if (listeningSockets[j]->getFd() == fd)
+                return (servers[i]);
         }
     }
     return (NULL);
@@ -122,12 +109,10 @@ void    ServerManager::addToEpoll(int clientSocket)
 }
 
 void ServerManager::closeConnection(int fd) {
-    Server* server = findServerBySocket(fd);
-    if (server) {
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-        server->closeConnection(fd);
-        Clients.erase(fd);
-    }
+    epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+    std::clog << INFO << timeStamp() << "INFO: Client disconnected, client socket N" << fd <<".\n" << RESET;
+    close(fd);
+    Clients.erase(fd);
 }
 
 void ServerManager::modifyEpollEvent(int fd, uint32_t events) {
@@ -332,8 +317,9 @@ void  ServerManager::initServers()
     handleSignals();
     for (size_t i = 0; i < serverPool.size(); i++)
     {
+        Server* server;
         try {    
-            Server* server = new Server(serverPool[i]);
+            server = new Server(serverPool[i]);
             std::clog << INFO << timeStamp() << "INFO: Setting & starting up server :\n" << RESET << "   -host: " << serverPool[i].getHost() << "\n";
             std::set<int>::const_iterator port =  serverPool[i].getPorts().begin();
             while (port != serverPool[i].getPorts().end()) {
@@ -347,6 +333,7 @@ void  ServerManager::initServers()
                 listeningSockets[sockets[j]->getFd()] = sockets[j];
         }
         catch(const std::exception& e) {
+            delete server;
             std::cerr << e.what() << '\n';
         }
     }

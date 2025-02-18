@@ -328,6 +328,11 @@ size_t    HttpRequest::parseChunkedBody()
     return (_pos - startPos);
 }
 
+// size_t    HttpRequest::parseMultiPartBody()
+// {
+
+// }
+
 std::string HttpRequest::readLine()
 {
     size_t start = _pos;
