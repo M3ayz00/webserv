@@ -268,8 +268,8 @@ size_t    HttpRequest::parseHeaders()
         std::pair<std::string, std::string> keyValue = splitKeyValue(line, ':');
         std::string key = toLowerCase(keyValue.first);
         std::string value = strTrim(keyValue.second);
-        // if (key.empty() || key.find_first_of(" \t") != std::string::npos || key.find_last_of(" \t") != std::string::npos)
-        //     throw 400;
+        if (key.empty() || key.find_first_of(" \t") != std::string::npos || key.find_last_of(" \t") != std::string::npos)
+            throw 400;
         if (headers.find(key) != headers.end())
             headers[key] += "," + value;
         else
