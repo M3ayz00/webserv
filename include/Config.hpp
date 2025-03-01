@@ -2,6 +2,7 @@
 
 #include <bits/stdc++.h>
 #include "Route.hpp"
+#include "Common.h"
 
 class Config
 {

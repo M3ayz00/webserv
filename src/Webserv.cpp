@@ -24,7 +24,7 @@ Config parseSeverBlock(std::string& server_block) {
     while (std::getline(tokenStream, token, '\n')) {
         if (token.empty()) continue;
     
-        int pos = token.find("=");
+        size_t pos = token.find("=");
         if (pos == std::string::npos)
             throw std::runtime_error("SYNTAX ERROR: missing = in configuration");
 

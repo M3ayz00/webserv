@@ -19,12 +19,12 @@
 class ServerManager
 {
     private :
-        std::vector<Config> serverPool;
+    std::vector<Config> serverPool;
+        int epollFd;
+        std::vector<struct epoll_event> events;
         std::vector<Server*> servers;
         std::map<int, Socket*> listeningSockets;
-        std::vector<struct epoll_event> events;
         std::map<int, Client> Clients;
-        int epollFd;
 
         void	initServers();
         void    initEpoll();
@@ -53,7 +53,7 @@ class ServerManager
         void    shutDownManager();
 
     public  :
-        void LOG(int status, HttpRequest& request, HttpResponse& response);
+        void LOG(HttpRequest& request, HttpResponse& response);
         ServerManager();
         ServerManager(const std::vector<Config>& _serverPool);
         ~ServerManager();

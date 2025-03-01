@@ -17,7 +17,8 @@ class HttpResponse
 
 private:
     
-
+    static void generateStatusCodes();
+    static void generateMimeTypes();   
 public:
     Config     serverConfig;
     long        statusCode; // pair <code, msg>
@@ -26,7 +27,7 @@ public:
     std::string requestedContent;
 
     std::string contentType;
-    size_t      contentLength;
+    long      contentLength;
     std::string Date;
     std::string Server;
     std::string Connection;
@@ -38,7 +39,7 @@ public:
     std::string    generateErrorPage(size_t code);
     void        setErrorPage(std::map<int, std::string>& ErrPages);
     void    generateResponse(HttpRequest& request);
-    void    prepareHeaders(std::string& path, HttpRequest& request);
+    void    prepareHeaders(std::string& path);
     void    setResponseStatusCode(unsigned code) { statusCode = code; }
     
     bool    isCgiScript(HttpRequest& request);

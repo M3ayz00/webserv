@@ -25,7 +25,6 @@
 #include <map>
 #include <vector>
 #include <queue>
-#include <unordered_map>
 
 #include <cstdlib>
 #include <csignal>
@@ -43,3 +42,5 @@ int hexToValue(char c);
 bool isHexDigit(char c);
 int _16_to_10(std::string str);
 std::string    timeStamp();
+std::string toString(int num);
+unsigned long long atoull(std::string str);

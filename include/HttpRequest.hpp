@@ -8,15 +8,6 @@ class HttpIncompleteRequest : public std::exception
     virtual const char * what() const throw() {return "Need more data to complete request";}
 };
 
-class HttpRequestError : public std::exception 
-{
-    private:
-        std::string _msg;
-    public:
-        HttpRequestError(const std::string& msg) : _msg(msg) {}
-        virtual const char* what() const throw() { return _msg.c_str(); }
-};
-
 enum parsingState
 {
     REQUESTLINE,
@@ -28,25 +19,26 @@ enum parsingState
 class HttpRequest 
 {
     private:
+        parsingState state;
         const uint8_t* _buffer;
         size_t _pos, _bufferLen, bodyStart;
         Config  configs;
         std::string defaultIndex;
-        bool        autoIndex;
         unsigned    statusCode;
-        bool    fileCreated;
-        std::string outfilename;
+        std::string originalUri;
+        bool        autoIndex;
         int     _currentChunkSize;
-        long long _totalBodysize;
-        size_t _currentChunkBytesRead;  
+        unsigned long long _currentChunkBytesRead;  
+        bool    fileCreated;
+        bool    isChunked;
+        unsigned long long _totalBodysize;
+        std::string outfilename;
         std::string method, uri, uriPath, version;
         std::vector<uint8_t> body;
         std::vector<uint8_t> request;
-        std::string originalUri;
         std::map<std::string, std::string> uriQueryParams;
         std::map<std::string, std::string> headers;
         std::string  RequestrouteKey;
-        bool    isChunked;
         Route   routeConf;
         //request-line parsing
         size_t    parseRequestLine();
@@ -72,7 +64,6 @@ class HttpRequest
 
     public:
 
-        parsingState state;
         void    validateURI();
         HttpRequest();
         HttpRequest(const Config& _configs);

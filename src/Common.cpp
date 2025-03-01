@@ -58,7 +58,7 @@ int _16_to_10(std::string str)
     return (-1);
   int result = 0;
   std::string trimmed = strTrim(str);
-  for (int i = 0; i < trimmed.size(); i++)
+  for (size_t i = 0; i < trimmed.size(); i++)
   {
     if (!isHexDigit(trimmed[i]))
       return -1;
@@ -79,4 +79,26 @@ std::string timeStamp()
     char output[50];
     strftime(output, 50, "%D %r", &datetime);
     return ("[" + std::string(output) + "] ");
+}
+
+std::string toString(int num)
+{
+  std::ostringstream oss;
+  oss << num;
+  return (oss.str());
+}
+
+unsigned long long atoull(std::string str)
+{
+  if (str.empty())
+    return (-1);
+  unsigned long long result = 0;
+  std::string trimmed = strTrim(str);
+  for (size_t i = 0; i < trimmed.size(); i++)
+  {
+    if (!std::isdigit(trimmed[i]))
+      return -1;
+    result = result * 10 + trimmed[i] - '0';
+  }
+  return (result);
 }

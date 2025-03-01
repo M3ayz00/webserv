@@ -16,17 +16,18 @@ enum ClientState {
 class Client {
     public:
         int client_fd;
-        std::string    sendBuffer;
-        size_t         sendOffset;
-        std::ifstream  file;
-        size_t          fileOffset;
+        Config& client_config; 
         HttpRequest     request;
         HttpResponse    response;
+        size_t         sendOffset;
         ClientState     state;
         bool            keepAlive;
+        std::string    sendBuffer;
+        std::ifstream  file;
+        size_t          fileOffset;
         int serverPort;
-        Config& client_config; 
         Client(int client_fd, Config& Conf);
+        Client(const Client& C);
         void resetState() {
             request.reset();
             response.reset();

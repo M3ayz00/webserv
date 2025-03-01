@@ -1,5 +1,5 @@
 CXX = c++
-CXXFLAGS = -Ofast -g3 #-Wall -Wextra -Werror #-std=c++98 
+CXXFLAGS = -Ofast -g3 -Wall -Wextra -Werror -std=c++98 
 
 NAME = server
 

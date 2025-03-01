@@ -93,6 +93,7 @@
     "stacktrace": "cpp",
     "stdfloat": "cpp",
     "text_encoding": "cpp",
-    "unordered_map": "cpp"
+    "unordered_map": "cpp",
+    "ios": "cpp"
   }
 }

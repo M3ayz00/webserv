@@ -7,7 +7,7 @@ std::string readConfigFile(std::string path) {
     std::string config_content;
     if (path.size() < 5 || (path[path.size() - 1] != 'f' || path[path.size() - 2] != 'n') || path[path.size() - 3] != 'o' || path[path.size() - 4] != 'c' || path[path.size() - 5]  != '.')
         throw std::runtime_error("invalid extention, expected exemple.conf");
-    std::ifstream file(path);
+    std::ifstream file(path.c_str());
     if (!file.is_open())
         throw std::runtime_error("Failed to open file: " + path);
     std::string line;
@@ -29,7 +29,7 @@ void    Config::insertPort(std::string value) {
             throw std::runtime_error("PORT ERROR: invalid port number");
         if (portValue.size() > 5)
             throw std::runtime_error("PORT ERROR: invalid port number");
-        port = std::stoi(portValue);
+        port = atoull(portValue);
         if (port < 1024 || port > 65535)
             throw std::runtime_error("PORT ERROR: cannot bind to this port number");
         ports.insert(port);
@@ -47,7 +47,7 @@ void    Config::insertHost(std::string value) {
             throw std::runtime_error("HOST ERROR: invalid host number");
         if (Octet.size() > 3)
             throw std::runtime_error("HOST ERROR: invalid host number");
-        if (std::stoi(Octet) < 0 || std::stoi(Octet) > 255)
+        if (atoull(Octet) > 255)
             throw std::runtime_error("HOST ERROR: invalid host number");
         count++;
     }
@@ -73,7 +73,7 @@ void    Config::insertMaxBodySize(std::string value) {
     if (value.find_first_not_of("0123456789") != std::string::npos)
         throw std::runtime_error("MAX BODY SIZE ERROR: invalid max body size");
     try {
-        max_body_size = std::stoull(value);
+        max_body_size = atoull(value);
     }
     catch (std::exception &e) {
         throw std::runtime_error("MAX BODY SIZE ERROR: invalid max body size");
@@ -123,7 +123,7 @@ void    Config::insertErrorPages(std::string value) {
         std::string errorPage = error.substr(error.find(':') + 1);
         if (errorPage.empty())
             throw std::runtime_error("ERROR_PAGES ERROR: empty error page");
-        error_pages[std::stoi(errorCode)] = errorPage;
+        error_pages[atoull(errorCode)] = errorPage;
     }
 }
 
@@ -207,7 +207,7 @@ void    Config::insertRoute(std::string value) {
             if (value.find_first_not_of("0123456789") != std::string::npos)
                 throw std::runtime_error("ROUTE ERROR: invalid max body size");
             try {
-                route.max_body_size = std::stoull(value);
+                route.max_body_size = atoull(value);
             }
             catch (std::exception &e) {
                 throw std::runtime_error("ROUTE ERROR: invalid max body size");

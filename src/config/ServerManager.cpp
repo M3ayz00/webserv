@@ -53,12 +53,12 @@ Server* ServerManager::findServerBySocket(int fd)
 {
     if (fd < 0)
         return (NULL);
-    for (int i = 0; i < servers.size(); i++)
+    for (size_t i = 0; i < servers.size(); i++)
     {
         if (isListeningSocket(fd))
         {
             const std::vector<Socket*>& listeningSockets = servers[i]->getListeningSockets();
-            for (int j = 0; j < listeningSockets.size(); j++)
+            for (size_t j = 0; j < listeningSockets.size(); j++)
             {
                 if (listeningSockets[j]->getFd() == fd)
                     return (servers[i]);
@@ -68,7 +68,7 @@ Server* ServerManager::findServerBySocket(int fd)
         {
             const std::vector<int>& clientSockets = servers[i]->getClientSockets();     
             std::find(clientSockets.begin(), clientSockets.end(), fd);  
-            for (int k = 0; k < clientSockets.size(); k++)
+            for (size_t k = 0; k < clientSockets.size(); k++)
             {
                 if (clientSockets[k] == fd)
                     return (servers[i]);
@@ -81,7 +81,7 @@ Server* ServerManager::findServerBySocket(int fd)
 void  ServerManager::setNonBlocking(int fd)
 {
     if (fd < 0)
-        throw std::runtime_error(ERROR + timeStamp() + "ERROR: Invalid file descriptor: " + std::to_string(fd) + std::string(RESET));
+        throw std::runtime_error(ERROR + timeStamp() + "ERROR: Invalid file descriptor: " + toString(fd) + std::string(RESET));
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1)
         throw std::runtime_error(ERROR + timeStamp() + "ERROR: Getting flags for client socket: " + std::string(strerror(errno)) + std::string(RESET));
@@ -140,7 +140,7 @@ void ServerManager::modifyEpollEvent(int fd, uint32_t events) {
     }
 }
 
-void ServerManager::LOG(int status, HttpRequest& request, HttpResponse& response) {
+void ServerManager::LOG(HttpRequest& request, HttpResponse& response) {
     std::string statusColor = CYAN;
 
     if (response.statusCode >= 400) { statusColor = RED; }
@@ -262,37 +262,12 @@ void    ServerManager::handleConnections(int listeningSocket)
         int clientFD = server->acceptConnection(listeningSocket);
         if (clientFD == -1) return ;
         addToEpoll(clientFD);
-        Clients.emplace(clientFD, Client(clientFD, server->getserverConfig()));
+        Clients.insert(std::make_pair(clientFD, Client(clientFD, server->getserverConfig())));
     }
     catch(const std::exception& e) {
         std::cerr << e.what() << '\n';
     }
 }
-
-// void ServerManager::handleConnections(int listeningSocket) {
-//     try {
-//         Server* server = findServerBySocket(listeningSocket);
-//         int clientFD = server->acceptConnection(listeningSocket);
-//         if (clientFD == -1) return;
-
-//         struct sockaddr_in addr;
-//         socklen_t addrLen = sizeof(addr);
-//         if (getsockname(listeningSocket, (struct sockaddr*)&addr, &addrLen) == -1) {
-//             std::cerr << "getsockname failed: " << strerror(errno) << "\n";
-//             close(clientFD);
-//             return;
-//         }
-//         int serverPort = ntohs(addr.sin_port);
-
-//         addToEpoll(clientFD);
-//         Client client(clientFD, server->getserverConfig());
-//         client.setServerPort(serverPort); // Set the port
-//         Clients.emplace(clientFD, client);
-//         std::cout << "Client connected on port: " << serverPort << "\n"; // Debug
-//     } catch (const std::exception& e) {
-//         std::cerr << e.what() << "\n";
-//     }
-// }
 
 void ServerManager::readRequest(Client& Client) {
     uint8_t buffer[READ_BUFFER_SIZE];
@@ -332,7 +307,7 @@ void ServerManager::handleRequest(int clientSocket)
             client.setState(GENERATING_RESPONSE);
             response.generateResponse(request);
 
-            LOG(request.getStatusCode(), request, response);
+            LOG(request, response);
             
             modifyEpollEvent(clientSocket, EPOLLOUT);
         }
@@ -366,7 +341,7 @@ void    ServerManager::eventsLoop()
             std::cerr << ERROR << timeStamp() << "ERROR: in epoll_wait: " << strerror(errno) << std::endl << RESET;
             continue ;
         }
-        if (eventsNum == events.size())
+        if (static_cast<size_t>(eventsNum) == events.size())
             events.resize(events.size() * 2);
 
         for (int i = 0; i < eventsNum; i++)

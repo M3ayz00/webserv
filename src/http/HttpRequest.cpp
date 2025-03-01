@@ -216,7 +216,7 @@ std::string HttpRequest::decodeAndNormalize()
     std::istringstream iss(uriPath);
     std::string segment;
     std::string decodedAndNormalized;
-    bool hasTrailingSlash = uriPath.back() == '/';
+    bool hasTrailingSlash = uriPath[uriPath.size() - 1] == '/';
 
     while (std::getline(iss, segment, '/'))
         decodedAndNormalized += "/" + decode(segment);
@@ -281,12 +281,12 @@ size_t    HttpRequest::parseHeaders()
 }
 
 std::string getFancyFilename() {
-    static std::atomic<uint64_t> counter(0);
+    static unsigned long long counter = 0;
     std::time_t now = std::time(0);
     std::tm* gmt = std::gmtime(&now);
     char buffer[100];
     std::strftime(buffer, sizeof(buffer), "%a-%d-%b-%Y-%H:%M:%S-GMT", gmt);
-    return std::string(buffer) + "-" + std::to_string(counter++);
+    return std::string(buffer) + "-" + toString(counter++);
 }
 
 size_t HttpRequest::parseBody() {
@@ -296,8 +296,8 @@ size_t HttpRequest::parseBody() {
         return parseChunkedBody();
     }
 
-    long contentLength;
-    try { contentLength = std::stol(headers["content-length"]); }
+    unsigned long long contentLength;
+    try { contentLength = atoull(headers["content-length"]); }
     catch (...) { throw 400; }
     if (contentLength > getConfig().max_body_size) { throw 413; }
 
@@ -307,7 +307,9 @@ size_t HttpRequest::parseBody() {
 
     // // Store body for CGI
     body.insert(body.end(), _buffer + _pos, _buffer + _pos + contentLength);
-    std::ofstream ofile(getUploadDir() + "FILE_" + getFancyFilename(), std::ios::binary);
+    outfilename = getUploadDir() + "FILE_" + getFancyFilename();
+    std::ofstream ofile;
+    ofile.open(outfilename.c_str(), std::ios::binary);
     if (!ofile.is_open()) { throw 500; }
     ofile.write((const char*)(_buffer + _pos), contentLength);
     ofile.close();
@@ -325,7 +327,8 @@ size_t HttpRequest::parseChunkedBody() {
         outfilename = getUploadDir() + "XFILE_" + getFancyFilename();
         fileCreated = true;
     }
-    std::ofstream ofile(outfilename, std::ios::app | std::ios::binary);
+    std::ofstream ofile;
+    ofile.open(outfilename.c_str(), std::ios::app | std::ios::binary);
     if (!ofile.is_open()) { throw 500; }
 
     try {
@@ -361,7 +364,7 @@ size_t HttpRequest::parseChunkedBody() {
             _pos += bytesToRead;
             _currentChunkBytesRead += bytesToRead;
 
-            if (_currentChunkBytesRead == _currentChunkSize) {
+            if (static_cast<int>(_currentChunkBytesRead)== _currentChunkSize) {
                 readLine();
                 _currentChunkSize = -1;
                 _currentChunkBytesRead = 0;

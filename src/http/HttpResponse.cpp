@@ -8,61 +8,69 @@
 
 #define CRLF "\r\n"
 
+std::map<int, std::string> HttpResponse::statusCodesMap;
+std::map<std::string, std::string> HttpResponse::mimeTypes;
 
-std::map<int, std::string> HttpResponse::statusCodesMap = {
-    {200, "OK"},
-    {201, "Created"},
-    {202, "Accepted"},
-    {204, "No Content"},
-    {301, "Moved Permanently"},
-    {302, "Found"},
-    {304, "Not Modified"},
-    {400, "Bad Request"},
-    {401, "Unauthorized"},
-    {403, "Forbidden"},
-    {404, "Not Found"},
-    {405, "Method Not Allowed"},
-    {413, "Request Entity Too Large"},
-    {414, "URI Too Long"},
-    {500, "Internal Server Error"},
-    {501, "Not Implemented"},
-    {503, "Service Unavailable"},
-    {505, "HTTP Version Not Supported"}
-};
+void HttpResponse::generateStatusCodes()
+{
+    statusCodesMap[200] = "OK";
+    statusCodesMap[201] = "Created";
+    statusCodesMap[202] = "Accepted";
+    statusCodesMap[204] = "No Content";
+    statusCodesMap[301] = "Moved Permanently";
+    statusCodesMap[302] = "Found";
+    statusCodesMap[304] = "Not Modified";
+    statusCodesMap[400] = "Bad Request";
+    statusCodesMap[401] = "Unauthorized";
+    statusCodesMap[403] = "Forbidden";
+    statusCodesMap[404] = "Not Found";
+    statusCodesMap[405] = "Method Not Allowed";
+    statusCodesMap[413] = "Request Entity Too Large";
+    statusCodesMap[414] = "URI Too Long";
+    statusCodesMap[500] = "Internal Server Error";
+    statusCodesMap[501] = "Not Implemented";
+    statusCodesMap[503] = "Service Unavailable";
+    statusCodesMap[505] = "HTTP Version Not Supported";
+}
 
-std::map<std::string, std::string> HttpResponse::mimeTypes = {
-    {".html", "text/html"},
-    {".htm", "text/html"},
-    {".css", "text/css"},
-    {".js", "application/javascript"},
-    {".json", "application/json"},
-    {".xml", "application/xml"},
-    {".txt", "text/plain"},
-    {".jpg", "image/jpeg"},
-    {".jpeg", "image/jpeg"},
-    {".png", "image/png"},
-    {".gif", "image/gif"},
-    {".bmp", "image/bmp"},
-    {".ico", "image/x-icon"},
-    {".svg", "image/svg+xml"},
-    {".pdf", "application/pdf"},
-    {".zip", "application/zip"},
-    {".tar", "application/x-tar"},
-    {".gz", "application/gzip"},
-    {".mp3", "audio/mpeg"},
-    {".mp4", "video/mp4"},
-    {".mpeg", "video/mpeg"},
-    {".avi", "video/x-msvideo"},
-    {".csv", "text/csv"},
-    {".doc", "application/msword"},
-    {".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
-    {".xls", "application/vnd.ms-excel"},
-    {".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
-    {".ppt", "application/vnd.ms-powerpoint"},
-    {".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"}
-};
+void HttpResponse::generateMimeTypes()
+{
+    mimeTypes[".html"] = "text/html";
+    mimeTypes[".htm"] = "text/html";
+    mimeTypes[".css"] = "text/css";
+    mimeTypes[".js"] = "application/javascript";
+    mimeTypes[".json"] = "application/json";
+    mimeTypes[".xml"] = "application/xml";
+    mimeTypes[".txt"] = "text/plain";
+    mimeTypes[".jpg"] = "image/jpeg";
+    mimeTypes[".jpeg"] = "image/jpeg";
+    mimeTypes[".png"] = "image/png";
+    mimeTypes[".gif"] = "image/gif";
+    mimeTypes[".bmp"] = "image/bmp";
+    mimeTypes[".ico"] = "image/x-icon";
+    mimeTypes[".svg"] = "image/svg+xml";
+    mimeTypes[".pdf"] = "application/pdf";
+    mimeTypes[".zip"] = "application/zip";
+    mimeTypes[".tar"] = "application/x-tar";
+    mimeTypes[".gz"] = "application/gzip";
+    mimeTypes[".mp3"] = "audio/mpeg";
+    mimeTypes[".mp4"] = "video/mp4";
+    mimeTypes[".mpeg"] = "video/mpeg";
+    mimeTypes[".avi"] = "video/x-msvideo";
+    mimeTypes[".csv"] = "text/csv";
+    mimeTypes[".doc"] = "application/msword";
+    mimeTypes[".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    mimeTypes[".xls"] = "application/vnd.ms-excel";
+    mimeTypes[".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    mimeTypes[".ppt"] = "application/vnd.ms-powerpoint";
+    mimeTypes[".pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
-HttpResponse::HttpResponse(Config& conf) : serverConfig(conf) , contentType("text/html"), contentLength(0) {}
+}
+
+HttpResponse::HttpResponse(Config& conf) : serverConfig(conf) , contentType("text/html"), contentLength(0) {
+    generateStatusCodes();
+    generateMimeTypes();
+}
 
 std::string getContentType(std::string path) {
     size_t pos = path.find_last_of('.');
@@ -111,14 +119,14 @@ std::string HttpResponse::combineHeaders() {
     ss << "HTTP/1.1 " << statusCode << " " << statusCodesMap[statusCode] << CRLF
        << "Date: " << getCurrentDateHeader() << CRLF
        << "Content-Type: " << contentType << CRLF
-       << "Content-Length: " << std::to_string(contentLength) << CRLF
+       << "Content-Length: " << toString(contentLength) << CRLF
        << "Server: EnginX" << CRLF
        << "Connection: " << Connection << CRLF << CRLF;
     return ss.str();
 }
 
 std::string getConnetionType(std::map<std::string, std::string>& headers) {
-    auto it = headers.find("Connection");
+    std::map<std::string, std::string>::iterator it = headers.find("Connection");
     if (it == headers.end()) { return "close"; }
     if (it != headers.end()) {
         return it->second.empty() ? "close" : it->second;
@@ -126,7 +134,7 @@ std::string getConnetionType(std::map<std::string, std::string>& headers) {
     return "close";
 }
 
-void    HttpResponse::prepareHeaders(std::string& path, HttpRequest& request) {
+void    HttpResponse::prepareHeaders(std::string& path) {
     contentType = getContentType(path);
     contentLength = getFileContentLength(path);
     if (contentLength == -1) { statusCode = 500; }
@@ -200,7 +208,7 @@ void HttpResponse::GET(HttpRequest& request) {
     unsigned code = checkFilePerms(path);
 
     if (isDirectory(path)) {
-        if (path.back() != '/') {
+        if (path[path.size() - 1] != '/') {
             statusCode = 301;
             responseHeaders = "HTTP/1.1 301 Moved Permanently\r\nLocation: " + request.getOriginalUri() + "/\r\n\r";
             responseBody.clear();
@@ -219,7 +227,7 @@ void HttpResponse::GET(HttpRequest& request) {
         if (!defaultFile.empty() && checkFilePerms(pathToIndex) == 200)
         {
             request.setURIpath(pathToIndex);
-            prepareHeaders(request.getUriPath(), request);
+            prepareHeaders(request.getUriPath());
         }
         else {
             if (request.getautoIndex() == true) {
@@ -234,7 +242,7 @@ void HttpResponse::GET(HttpRequest& request) {
     }
 
     if (code == 200) {
-        prepareHeaders(path, request);
+        prepareHeaders(path);
     }
     else {
         setErrorPage(request.getConfig().getErrorPages());
@@ -261,7 +269,8 @@ void    HttpResponse::setErrorPage(std::map<int, std::string>& ErrPages) {
         responseHeaders = combineHeaders();
         unsigned code = checkFilePerms(errPagePath);
         if (code == 200) {
-            std::ifstream errfile(errPagePath, std::ios::binary);
+            std::ifstream errfile;
+            errfile.open(errPagePath.c_str(), std::ios::binary);
             errfile.read(buffer, 4096);
             std::streamsize bytesRead = errfile.gcount();
             if (bytesRead > 0) {
@@ -390,31 +399,31 @@ void HttpResponse::handleCgiScript(HttpRequest &request)
     std::string cookieStr = request.getHeaders().count("cookie") 
         ? request.getHeaders()["cookie"] : "";
 
-    std::vector<std::string> envVars = {
-        "REQUEST_METHOD=" + request.getMethod(),
-        "QUERY_STRING=" + queryString,
-        "CONTENT_LENGTH=" + contentLengthStr,
-        "CONTENT_TYPE=" + contentTypeStr,
-        "SCRIPT_NAME=" + request.getOriginalUri(),
-        "SERVER_NAME=" + (!request.getConfig().server_names.empty() 
-            ? request.getConfig().server_names[0] : "localhost"),
-        "SERVER_PROTOCOL=HTTP/1.1",
-        "REMOTE_ADDR=127.0.0.1",
-        "GATEWAY_INTERFACE=CGI/1.1",
-        "REDIRECT_STATUS=200",
-        "SERVER_PORT=" + portPart,
-        "SCRIPT_FILENAME=" + uriPath,
-        "PATH_INFO=" + request.getOriginalUri(),
-        "PATH_TRANSLATED=" + uriPath,
-        "HTTP_HOST=" + request.getHeaderValue("host"),
-        "HTTP_COOKIE=" + cookieStr
-    };
+    std::vector<std::string> envVars;
+    envVars.push_back("REQUEST_METHOD=" + request.getMethod());
+    envVars.push_back("QUERY_STRING=" + queryString);
+    envVars.push_back("CONTENT_LENGTH=" + contentLengthStr);
+    envVars.push_back("CONTENT_TYPE=" + contentTypeStr);
+    envVars.push_back("SCRIPT_NAME=" + request.getOriginalUri());
+    envVars.push_back("SERVER_NAME=" + (!request.getConfig().server_names.empty() 
+        ? request.getConfig().server_names[0] : "localhost"));
+    envVars.push_back("SERVER_PROTOCOL=HTTP/1.1");
+    envVars.push_back("REMOTE_ADDR=127.0.0.1");
+    envVars.push_back("GATEWAY_INTERFACE=CGI/1.1");
+    envVars.push_back("REDIRECT_STATUS=200");
+    envVars.push_back("SERVER_PORT=" + portPart);
+    envVars.push_back("SCRIPT_FILENAME=" + uriPath);
+    envVars.push_back("PATH_INFO=" + request.getOriginalUri());
+    envVars.push_back("PATH_TRANSLATED=" + uriPath);
+    envVars.push_back("HTTP_HOST=" + request.getHeaderValue("host"));
+    envVars.push_back("HTTP_COOKIE=" + cookieStr);
+        
 
     std::vector<char*> envp;
     for (std::vector<std::string>::const_iterator envIt = envVars.begin(); envIt != envVars.end(); ++envIt) {
         envp.push_back(strdup(envIt->c_str()));
     }
-    envp.push_back(nullptr);
+    envp.push_back(NULL);
     std::string interpreter;
     if (extension == ".php") {
         interpreter = "/usr/bin/php-cgi";
@@ -424,8 +433,8 @@ void HttpResponse::handleCgiScript(HttpRequest &request)
         interpreter = "/bin/sh";
     } else {
         statusCode = 500;
-        setErrorPage(request.getConfig().getErrorPages());
-        for (char* env : envp) free(env);
+        setErrorPage(request.getConfig().getErrorPages());  
+        for (size_t i = 0; i < envp.size(); i++) free(envp[i]);
         return;
     }
 
@@ -445,7 +454,7 @@ void HttpResponse::handleCgiScript(HttpRequest &request)
         std::cerr << "Fork failed\n";
         statusCode = 500;
         setErrorPage(request.getConfig().getErrorPages());
-        for (char* env : envp) free(env);
+        for (size_t i = 0; i < envp.size(); i++) free(envp[i]);
         return;
     }
 
@@ -457,7 +466,7 @@ void HttpResponse::handleCgiScript(HttpRequest &request)
         dup2(pipe_out[1], STDOUT_FILENO);
         close(pipe_out[1]);
         char* argv[] = {const_cast<char*>(interpreter.c_str()), 
-                        const_cast<char*>(uriPath.c_str()), nullptr};
+                        const_cast<char*>(uriPath.c_str()), NULL};
         execve(interpreter.c_str(), argv, envp.data());
         std::cerr << "execve failed\n";
         exit(1);
@@ -519,7 +528,7 @@ void HttpResponse::handleCgiScript(HttpRequest &request)
                 std::string tempValue = line.substr(colonPos + 1);
                 std::string value = strTrim(tempValue);
                 if (key == "Status") {
-                    statusCode = std::stoi(value.substr(0, 3));
+                    statusCode = atoull(value.substr(0, 3));
                 } else if (key == "content-type") {
                     contentType = value;
                 } else if (key == "Set-Cookie") {
@@ -527,10 +536,10 @@ void HttpResponse::handleCgiScript(HttpRequest &request)
                 }
             }
         }
-        responseHeaders = "HTTP/1.1 " + std::to_string(statusCode) + " " + statusCodesMap[statusCode] + "\r\n" +
+        responseHeaders = "HTTP/1.1 " + toString(statusCode) + " " + statusCodesMap[statusCode] + "\r\n" +
                           "Date: " + Date + "\r\n" +
                           "Content-Type: " + contentType + "\r\n" +
-                          "Content-Length: " + std::to_string(contentLength) + "\r\n" +
+                          "Content-Length: " + toString(contentLength) + "\r\n" +
                           "Server: EnginX\r\n" +
                           "Connection: " + Connection + "\r\n";
         std::vector<std::string>::const_iterator cookieIt = setCookieHeaders.begin();
